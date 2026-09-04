@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Notificaciones - Luas Pets</title>
+</head>
+<body>
+
+<!-- rolActual llega en minusculas desde NotificacionController; 'notificaciones' como
+     seccion no coincide con ningun link del sidebar, asi que ninguno queda resaltado
+     (el fragmento sidebar ya tolera ese caso: solo compara con th:classappend). -->
+<div th:replace="~{fragments/layout :: sidebar(${rolActual}, 'notificaciones')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Notificaciones')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Notificaciones')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Notificaciones</h1>
+                <p class="lp-page-subtitle">Todas tus notificaciones, de la más reciente a la más antigua.</p>
+            </div>
+            <button type="button" id="btnMarcarTodasPagina" class="lp-btn-outline flex-shrink-0">
+                <i class="bi bi-check2-all me-1"></i>Marcar todas como leídas
+            </button>
+        </div>
+
+        <div th:if="${#lists.isEmpty(notificaciones)}" class="lp-card lp-empty-state">
+            <i class="bi bi-bell-slash"></i>
+            <p class="mb-0">No tienes notificaciones.</p>
+        </div>
+
+        <div class="lp-card p-0" th:unless="${#lists.isEmpty(notificaciones)}" id="notificacionesListaContainer">
+            <div th:each="n, iter : ${notificaciones}"
+                class="d-flex align-items-start gap-3 p-3"
+                th:styleappend="${!n.leida} ? 'background-color: var(--lp-primary-tint);'"
+                th:classappend="${!iter.last} ? 'border-bottom' : ''"
+                style="border-color: var(--lp-border);">
+
+                <span th:if="${!n.leida}" class="flex-shrink-0 mt-2"
+                    style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--lp-primary);"></span>
+                <span th:unless="${!n.leida}" class="flex-shrink-0" style="width: 8px;"></span>
+
+                <span class="flex-shrink-0 d-inline-flex align-items-center justify-content-center"
+                    style="width: 40px; height: 40px; border-radius: 50%;"
+                    th:styleappend="${n.variante == 'primary'} ? 'background-color: var(--lp-primary-soft); color: var(--lp-primary);' :
+                               (${n.variante == 'info'} ? 'background-color: #dbeafe; color: var(--lp-info);' :
+                               (${n.variante == 'warning'} ? 'background-color: #fef3c7; color: var(--lp-warning);' :
+                               'background-color: #fee2e2; color: var(--lp-danger);'))">
+                    <i th:class="'bi ' + ${n.icono}"></i>
+                </span>
+
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <a th:if="${n.url != null and !#strings.isEmpty(n.url)}" href="#" class="lp-notif-page-item text-decoration-none d-block"
+                        th:attr="data-id=${n.id}, data-url=${n.url}">
+                        <p class="mb-1" style="font-weight: 600; color: var(--lp-ink);" th:text="${n.titulo}">Título</p>
+                        <p class="mb-0" style="color: var(--lp-body);" th:text="${n.mensaje}">Mensaje</p>
+                    </a>
+                    <div th:unless="${n.url != null and !#strings.isEmpty(n.url)}">
+                        <p class="mb-1" style="font-weight: 600; color: var(--lp-ink);" th:text="${n.titulo}">Título</p>
+                        <p class="mb-0" style="color: var(--lp-body);" th:text="${n.mensaje}">Mensaje</p>
+                    </div>
+                </div>
+
+                <span class="flex-shrink-0" style="font-size: 0.78rem; color: var(--lp-muted);" th:text="${n.tiempoRelativo}">Hace 5 minutos</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

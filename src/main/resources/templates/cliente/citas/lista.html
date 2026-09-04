@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mis citas - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'citas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Mis citas')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Mis citas')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Mis citas</h1>
+                <p class="lp-page-subtitle">Consulta y gestiona tus citas veterinarias.</p>
+            </div>
+            <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary w-100 w-md-auto text-center flex-shrink-0">
+                <i class="bi bi-plus-lg me-1"></i>Agendar nueva cita
+            </a>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${param.exito}">
+            <i class="bi bi-check-circle"></i> Cita agendada correctamente
+        </div>
+        <div class="lp-alert lp-alert-success" th:if="${param.reprogramada}">
+            <i class="bi bi-check-circle"></i> Cita reprogramada correctamente
+        </div>
+        <div class="lp-alert lp-alert-danger" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <div th:if="${#lists.isEmpty(citas)}" class="lp-card lp-empty-state">
+            <i class="bi bi-calendar-x"></i>
+            <h5 class="fw-bold mb-1">Aún no tienes citas agendadas</h5>
+            <p class="mb-3">Agenda una cita para el cuidado de tu mascota.</p>
+            <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Agendar cita
+            </a>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(citas)}">
+            <div class="d-flex flex-wrap gap-2 mb-4" id="filtrosCitasCliente">
+                <a href="#" class="lp-chip active" data-estado="todas">Todas</a>
+                <a href="#" class="lp-chip" data-estado="PENDIENTE">Pendiente</a>
+                <a href="#" class="lp-chip" data-estado="CONFIRMADA">Confirmada</a>
+                <a href="#" class="lp-chip" data-estado="ATENDIDA">Atendida</a>
+                <a href="#" class="lp-chip" data-estado="CANCELADA">Cancelada</a>
+            </div>
+
+            <div class="lp-card p-0">
+                <div class="table-responsive">
+                    <table class="lp-table mb-0" id="tablaCitasCliente">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-heart me-1"></i>Mascota</th>
+                                <th><i class="bi bi-person-badge me-1"></i>Doctor</th>
+                                <th><i class="bi bi-calendar3 me-1"></i>Fecha y hora</th>
+                                <th>Motivo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="cita : ${citas}" th:attr="data-estado=${cita.estado.name()}">
+                                <td class="fw-semibold" th:text="${cita.mascota.nombre}">Mascota</td>
+                                <td th:text="${cita.doctor.nombre} + ' ' + ${cita.doctor.apellido}">Doctor</td>
+                                <td th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                                <td th:text="${cita.motivo}">Motivo</td>
+                                <td>
+                                    <span class="lp-badge"
+                                        th:classappend="${cita.estado.name() == 'PENDIENTE'} ? 'lp-badge-warning' :
+                                                         (${cita.estado.name() == 'CONFIRMADA'} ? 'lp-badge-info' :
+                                                         (${cita.estado.name() == 'ATENDIDA'} ? 'lp-badge-success' : 'lp-badge-secondary'))"
+                                        th:text="${cita.estado}">Estado</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2"
+                                        th:if="${cita.estado.name() == 'PENDIENTE' or cita.estado.name() == 'CONFIRMADA'}">
+                                        <a th:href="@{/cliente/citas/{id}/reprogramar(id=${cita.id})}"
+                                            class="lp-btn-outline btn-sm py-1 px-2">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Reprogramar
+                                        </a>
+
+                                        <form th:id="|formCancelarCita${cita.id}|"
+                                            th:action="@{/cliente/citas/{id}/cancelar(id=${cita.id})}" method="post" class="d-none">
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" th:attr="data-bs-target=|#modalCancelarCita${cita.id}|">
+                                            <i class="bi bi-calendar-x me-1"></i>Cancelar
+                                        </button>
+
+                                        <div class="modal fade" th:id="|modalCancelarCita${cita.id}|" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Cancelar cita</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        ¿Estás seguro de cancelar la cita de
+                                                        <strong th:text="${cita.mascota.nombre}"></strong> programada para el
+                                                        <strong th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></strong>?
+                                                        Esta acción no se puede deshacer.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" th:attr="form=|formCancelarCita${cita.id}|" class="btn btn-danger">
+                                                            <i class="bi bi-calendar-x me-1"></i>Sí, cancelar cita
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+    document.querySelectorAll('#filtrosCitasCliente .lp-chip').forEach(function (chip) {
+        chip.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelectorAll('#filtrosCitasCliente .lp-chip').forEach(function (c) { c.classList.remove('active'); });
+            this.classList.add('active');
+            var estado = this.getAttribute('data-estado');
+            document.querySelectorAll('#tablaCitasCliente tbody tr').forEach(function (fila) {
+                fila.style.display = (estado === 'todas' || fila.getAttribute('data-estado') === estado) ? '' : 'none';
+            });
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Doctores - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'doctores')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Doctores')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Doctores')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Doctores</h1>
+                <p class="lp-page-subtitle">Administra el equipo médico de la clínica.</p>
+            </div>
+            <a th:href="@{/admin/doctores/nuevo}" class="lp-btn-primary w-100 w-md-auto text-center flex-shrink-0">
+                <i class="bi bi-plus-lg me-1"></i>Registrar nuevo doctor
+            </a>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${param.exito}">
+            <i class="bi bi-check-circle"></i> Doctor registrado correctamente
+        </div>
+
+        <div th:if="${#lists.isEmpty(doctores)}" class="lp-card lp-empty-state">
+            <i class="bi bi-people"></i>
+            <h5 class="fw-bold mb-1">No hay doctores registrados</h5>
+            <p class="mb-3">Registra al primer doctor del equipo.</p>
+            <a th:href="@{/admin/doctores/nuevo}" class="lp-btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Registrar doctor
+            </a>
+        </div>
+
+        <div class="lp-card p-0" th:unless="${#lists.isEmpty(doctores)}">
+            <div class="table-responsive">
+                <table class="lp-table mb-0">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-person me-1"></i>Nombre</th>
+                            <th>Apellido</th>
+                            <th><i class="bi bi-envelope me-1"></i>Email</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="doctor : ${doctores}">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="lp-avatar" th:text="${#strings.substring(doctor.nombre, 0, 1)}">D</span>
+                                    <span class="fw-semibold" th:text="${doctor.nombre}">Nombre</span>
+                                </div>
+                            </td>
+                            <td th:text="${doctor.apellido}">Apellido</td>
+                            <td th:text="${doctor.email}">Email</td>
+                            <td th:text="${doctor.telefono}">Teléfono</td>
+                            <td>
+                                <span class="lp-badge" th:classappend="${doctor.activo} ? 'lp-badge-success' : 'lp-badge-secondary'"
+                                    th:text="${doctor.activo} ? 'Activo' : 'Inactivo'">Estado</span>
+                            </td>
+                            <td>
+                                <th:block th:if="${doctor.activo}">
+                                    <form th:id="|formDesactivarDoctor${doctor.id}|"
+                                        th:action="@{/admin/doctores/{id}/desactivar(id=${doctor.id})}" method="post" class="d-none">
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" th:attr="data-bs-target=|#modalDesactivarDoctor${doctor.id}|">
+                                        <i class="bi bi-slash-circle me-1"></i>Desactivar
+                                    </button>
+
+                                    <div class="modal fade" th:id="|modalDesactivarDoctor${doctor.id}|" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Desactivar doctor</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    El doctor <strong th:text="${doctor.nombre} + ' ' + ${doctor.apellido}"></strong>
+                                                    no podrá iniciar sesión ni recibir nuevas citas. Podrás reactivarlo después.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" th:attr="form=|formDesactivarDoctor${doctor.id}|" class="btn btn-danger">
+                                                        <i class="bi bi-slash-circle me-1"></i>Sí, desactivar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th:block>
+                                <form th:unless="${doctor.activo}" th:action="@{/admin/doctores/{id}/activar(id=${doctor.id})}"
+                                    method="post">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check-circle me-1"></i>Activar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

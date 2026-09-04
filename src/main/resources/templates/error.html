@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Error - Luas Pets</title>
+</head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="lp-card p-4 p-md-5 text-center">
+                <i class="bi bi-exclamation-triangle mb-3 d-block"
+                    style="font-size: 3.5rem; color: var(--lp-warning);"></i>
+
+                <p class="fw-bold mb-1" style="font-size: 2rem; color: var(--lp-ink);" th:text="${status}">500</p>
+
+                <div th:switch="${status}">
+                    <p th:case="403" class="mb-4">No tienes permiso para acceder a esta página.</p>
+                    <p th:case="404" class="mb-4">La página que buscas no existe.</p>
+                    <p th:case="500" class="mb-4">Ocurrió un error inesperado. Intenta nuevamente más tarde.</p>
+                    <p th:case="*" class="mb-4">Ocurrió un problema al procesar tu solicitud.</p>
+                </div>
+
+                <a th:href="@{/}" class="lp-btn-primary">
+                    <i class="bi bi-house me-1"></i>Volver al inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

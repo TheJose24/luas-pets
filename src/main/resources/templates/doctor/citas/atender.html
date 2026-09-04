@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Atender cita - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('doctor', 'citas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Atender cita')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb('Mi agenda', '/doctor/citas', 'Atender cita')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <a th:href="@{/doctor/citas}" class="lp-btn-outline mb-3 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+
+        <div class="mb-4">
+            <h1 class="lp-page-title">Atender cita</h1>
+            <p class="lp-page-subtitle">Registra el historial médico de la mascota para esta cita.</p>
+        </div>
+
+        <div class="lp-alert lp-alert-danger" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <div th:if="${cita.mascota.alergias != null and !#strings.isEmpty(cita.mascota.alergias)}"
+            class="d-flex align-items-start gap-3 mb-4" style="background-color: #fee2e2; border-radius: 12px; padding: 16px;">
+            <i class="bi bi-exclamation-triangle-fill" style="color: var(--lp-danger); font-size: 1.25rem; flex-shrink: 0;"></i>
+            <div>
+                <p class="mb-1" style="font-weight: 600; color: var(--lp-danger);">Alergias registradas</p>
+                <p class="mb-0" style="color: var(--lp-ink);" th:text="${cita.mascota.alergias}">Alergias</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-lg-5"
+                th:with="foto=${cita.mascota.fotoUrl != null and !#strings.isEmpty(cita.mascota.fotoUrl)} ? ${cita.mascota.fotoUrl} : (${cita.mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${cita.mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))">
+                <div class="lp-card overflow-hidden">
+                    <img th:src="${foto}" alt="Foto de la mascota" style="width: 100%; height: 200px; object-fit: cover;" />
+                    <div class="p-4">
+                        <h5 class="fw-bold mb-3" th:text="${cita.mascota.nombre}">Mascota</h5>
+                        <p class="mb-1"><strong>Especie:</strong> <span th:text="${cita.mascota.especie}"></span></p>
+                        <p class="mb-1"><strong>Raza:</strong> <span th:text="${cita.mascota.raza}"></span></p>
+                        <p class="mb-1"><strong>Dueño:</strong>
+                            <span th:text="${cita.mascota.cliente.nombre} + ' ' + ${cita.mascota.cliente.apellido}"></span>
+                        </p>
+                        <p class="mb-1"><strong>Fecha:</strong>
+                            <span th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></span>
+                        </p>
+                        <p class="mb-0"><strong>Motivo:</strong> <span th:text="${cita.motivo}"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-7">
+                <div class="lp-card p-4 p-md-5">
+                    <h2 class="lp-section-title">Registrar historial médico</h2>
+
+                    <form th:action="@{/doctor/citas/{id}/atender(id=${cita.id})}" th:object="${historial}" method="post"
+                        class="needs-validation" novalidate>
+
+                        <div class="mb-3">
+                            <label for="diagnostico" class="form-label fw-medium">Diagnóstico</label>
+                            <textarea class="form-control" id="diagnostico" th:field="*{diagnostico}" rows="3"
+                                required></textarea>
+                            <div class="invalid-feedback">Describe el diagnóstico de la mascota</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tratamiento" class="form-label fw-medium">Tratamiento</label>
+                            <textarea class="form-control" id="tratamiento" th:field="*{tratamiento}" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pesoRegistrado" class="form-label fw-medium">Peso registrado (kg)</label>
+                            <input type="number" step="0.01" min="0.1" max="200" class="form-control" id="pesoRegistrado"
+                                th:field="*{pesoRegistrado}" />
+                            <div class="form-text">Actualizará el peso actual de la mascota.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="medicamentos" class="form-label fw-medium">Medicamentos recetados</label>
+                            <textarea class="form-control" id="medicamentos" th:field="*{medicamentos}" rows="3"></textarea>
+                            <div class="form-text">
+                                Un medicamento por línea, indicando dosis y frecuencia. Ejemplo: Otomax gotas — 4 gotas, 2 veces al día por 7 días.
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="observaciones" class="form-label fw-medium">Observaciones</label>
+                            <textarea class="form-control" id="observaciones" th:field="*{observaciones}" rows="3"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a th:href="@{/doctor/citas}" class="lp-btn-outline">
+                                <i class="bi bi-arrow-left me-1"></i>Volver
+                            </a>
+                            <button type="submit" class="lp-btn-primary border-0">
+                                <i class="bi bi-clipboard-pulse me-1"></i>Registrar y marcar como atendida
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

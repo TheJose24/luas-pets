@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Panel del Doctor - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('doctor', 'dashboard')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Portal Veterinario')}"></div>
+
+    <div class="container-fluid p-4">
+        <div class="mb-4">
+            <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--lp-ink); line-height: 1.2;">
+                <span th:text="${saludo}">¡Buenos días</span>, Dr. <span th:text="${usuario.nombre}">Doctor</span>!
+            </h1>
+            <p class="mb-0" style="color: var(--lp-body);">Este es el resumen de tu jornada.</p>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4">
+            <div class="col">
+                <div class="lp-tile lp-tile-primary h-100">
+                    <div class="lp-tile-top">
+                        <span class="lp-tile-icon"><i class="bi bi-calendar-event"></i></span>
+                        <span class="lp-tile-label">Citas de hoy</span>
+                    </div>
+                    <div class="lp-tile-value">
+                        <span th:text="${totalCitasHoy}">0</span>
+                        <span class="lp-tile-desc">programadas</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-tile lp-tile-info h-100">
+                    <div class="lp-tile-top">
+                        <span class="lp-tile-icon"><i class="bi bi-check-circle"></i></span>
+                        <span class="lp-tile-label">Atendidas</span>
+                    </div>
+                    <div class="lp-tile-value">
+                        <span th:text="${citasAtendidas}">0</span>
+                        <span class="lp-tile-desc">completadas</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-tile lp-tile-warning h-100">
+                    <div class="lp-tile-top">
+                        <span class="lp-tile-icon"><i class="bi bi-hourglass-split"></i></span>
+                        <span class="lp-tile-label">Pendientes</span>
+                    </div>
+                    <div class="lp-tile-value">
+                        <span th:text="${citasPendientes}">0</span>
+                        <span class="lp-tile-desc">por atender</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-tile lp-tile-neutral h-100">
+                    <div class="lp-tile-top">
+                        <span class="lp-tile-icon"><i class="bi bi-clipboard-pulse"></i></span>
+                        <span class="lp-tile-label">Total de citas</span>
+                    </div>
+                    <div class="lp-tile-value">
+                        <span th:text="${totalCitas}">0</span>
+                        <span class="lp-tile-desc">en total</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="col-12 col-lg-8">
+                <h2 class="lp-section-title">Siguiente cita</h2>
+
+                <div class="mb-4 d-flex flex-column flex-lg-row align-items-lg-center gap-3" th:if="${proximaCita != null}"
+                    th:with="fotoProxima=${proximaCita.mascota.fotoUrl != null and !#strings.isEmpty(proximaCita.mascota.fotoUrl)} ? ${proximaCita.mascota.fotoUrl} : (${proximaCita.mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${proximaCita.mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))"
+                    style="background: linear-gradient(135deg, var(--lp-primary), var(--lp-primary-dark)); border-radius: 16px; padding: 24px; color: #ffffff;">
+                    <img th:src="${fotoProxima}" alt="Foto de la mascota"
+                        style="width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.5); flex-shrink: 0;" />
+
+                    <div class="flex-grow-1">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="lp-badge" style="background-color: rgba(255,255,255,0.25); color: #ffffff;"
+                                th:text="${proximaCita.estado}">Estado</span>
+                            <span style="color: #ffffff;">
+                                <i class="bi bi-clock me-1"></i><span th:text="${#temporals.format(proximaCita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</span>
+                            </span>
+                        </div>
+                        <p class="mb-2" style="font-size: 1.4rem; font-weight: 700; color: #ffffff;" th:text="${proximaCita.mascota.nombre}">Mascota</p>
+                        <p class="mb-1" style="color: rgba(255,255,255,0.9);">
+                            <i class="bi bi-heart me-2"></i><span th:text="${proximaCita.mascota.especie} + ' - ' + ${proximaCita.mascota.raza}">Especie - Raza</span>
+                        </p>
+                        <p class="mb-1" style="color: rgba(255,255,255,0.9);">
+                            <i class="bi bi-person me-2"></i><span th:text="${proximaCita.mascota.cliente.nombre} + ' ' + ${proximaCita.mascota.cliente.apellido}">Dueño</span>
+                        </p>
+                        <p class="mb-0" style="color: rgba(255,255,255,0.9);">
+                            <i class="bi bi-clipboard-pulse me-2"></i><span th:text="${proximaCita.motivo}">Motivo</span>
+                        </p>
+                    </div>
+
+                    <div class="d-flex flex-row flex-lg-column gap-2 flex-shrink-0">
+                        <a th:href="@{/doctor/citas/{id}/atender(id=${proximaCita.id})}"
+                            style="background-color: #ffffff; color: var(--lp-primary); border-radius: 10px; padding: 10px 20px; font-weight: 600; text-decoration: none; text-transform: uppercase; font-size: 0.85rem; text-align: center;">
+                            Atender cita
+                        </a>
+                        <button th:if="${proximaCita.estado.name() == 'PENDIENTE'}" type="button"
+                            data-bs-toggle="modal" data-bs-target="#modalConfirmarProximaCita"
+                            style="background-color: transparent; border: 1px solid rgba(255,255,255,0.6); color: #ffffff; border-radius: 10px; padding: 10px 20px; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; text-align: center;">
+                            <i class="bi bi-check-lg me-1"></i>Confirmar
+                        </button>
+                        <a th:href="@{/doctor/pacientes/{id}(id=${proximaCita.mascota.id})}"
+                            style="background-color: transparent; border: 1px solid rgba(255,255,255,0.6); color: #ffffff; border-radius: 10px; padding: 10px 20px; font-weight: 600; text-decoration: none; text-transform: uppercase; font-size: 0.85rem; text-align: center;">
+                            Ver ficha
+                        </a>
+                    </div>
+
+                    <form id="formConfirmarProximaCita" th:if="${proximaCita.estado.name() == 'PENDIENTE'}"
+                        th:action="@{/doctor/citas/{id}/confirmar(id=${proximaCita.id})}" method="post" class="d-none">
+                    </form>
+                    <div class="modal fade" id="modalConfirmarProximaCita" th:if="${proximaCita.estado.name() == 'PENDIENTE'}"
+                        tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirmar cita</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ¿Confirmas la cita de <strong th:text="${proximaCita.mascota.nombre}"></strong> del
+                                    <strong th:text="${#temporals.format(proximaCita.fechaHora, 'dd/MM/yyyy HH:mm')}"></strong>?
+                                    El cliente verá la cita como confirmada.
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" form="formConfirmarProximaCita" class="btn btn-primary">
+                                        <i class="bi bi-check-lg me-1"></i>Sí, confirmar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lp-card lp-empty-state mb-4" th:if="${proximaCita == null}">
+                    <i class="bi bi-calendar-check"></i>
+                    <p class="mb-3">No tienes citas próximas</p>
+                    <a th:href="@{/doctor/citas}" class="lp-btn-primary">Ver mi agenda</a>
+                </div>
+
+                <div class="lp-card p-4">
+                    <h2 class="lp-section-title mb-3">Agenda de hoy</h2>
+
+                    <div th:if="${#lists.isEmpty(citasHoy)}" class="lp-empty-state py-3">
+                        <i class="bi bi-calendar-x"></i>
+                        <p class="mb-0">No tienes citas programadas para hoy.</p>
+                    </div>
+
+                    <div id="agendaHoyLista" th:unless="${#lists.isEmpty(citasHoy)}">
+                        <div class="lp-agenda-row" th:each="cita : ${citasHoy}"
+                            th:attr="data-estado=${cita.estado.name()}, data-href=${cita.estado.name() != 'ATENDIDA' and cita.estado.name() != 'CANCELADA'} ? @{/doctor/citas/{id}/atender(id=${cita.id})} : null"
+                            th:with="fotoHoy=${cita.mascota.fotoUrl != null and !#strings.isEmpty(cita.mascota.fotoUrl)} ? ${cita.mascota.fotoUrl} : (${cita.mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${cita.mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))">
+                            <span class="lp-agenda-hora" th:text="${#temporals.format(cita.fechaHora, 'HH:mm')}">10:00</span>
+                            <img th:src="${fotoHoy}" alt="Foto de la mascota"
+                                style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold" style="color: var(--lp-ink);" th:text="${cita.mascota.nombre}">Mascota</span>
+                                    <span class="lp-badge"
+                                        th:classappend="${cita.estado.name() == 'PENDIENTE'} ? 'lp-badge-warning' :
+                                                         (${cita.estado.name() == 'CONFIRMADA'} ? 'lp-badge-info' :
+                                                         (${cita.estado.name() == 'ATENDIDA'} ? 'lp-badge-success' : 'lp-badge-secondary'))"
+                                        th:text="${cita.estado}">Estado</span>
+                                </div>
+                                <p class="lp-agenda-meta mb-0"
+                                    th:text="${cita.mascota.especie} + ' · ' + ${cita.mascota.raza} + ' · Dueño: ' + ${cita.mascota.cliente.nombre}">
+                                    Especie · Raza · Dueño</p>
+                            </div>
+                            <span class="lp-agenda-chip" th:text="${cita.motivo}">Motivo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA -->
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4 mb-4">
+                    <h2 class="lp-section-title mb-3">Acciones rápidas</h2>
+                    <div class="d-flex flex-column gap-2">
+                        <a th:href="@{/doctor/citas}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-calendar3"></i></span>
+                                <span class="lp-quick-action-label">Ver mi agenda</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                        <a th:if="${proximaCita != null}" th:href="@{/doctor/citas/{id}/atender(id=${proximaCita.id})}"
+                            class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-clipboard-plus"></i></span>
+                                <span class="lp-quick-action-label">Atender siguiente cita</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                        <a th:href="@{/doctor/citas}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-heart-pulse"></i></span>
+                                <span class="lp-quick-action-label">Mis pacientes</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="lp-card p-4 mb-4">
+                    <h2 class="lp-section-title mb-3">Requieren atención</h2>
+
+                    <div th:if="${#lists.isEmpty(citasVencidas)}" class="d-flex align-items-start gap-3"
+                        style="background-color: var(--lp-primary-tint); border-radius: 10px; padding: 12px;">
+                        <i class="bi bi-check-circle" style="color: var(--lp-success); font-size: 1.1rem; flex-shrink: 0;"></i>
+                        <p class="mb-0 fw-medium" style="color: var(--lp-ink);">Todo al día. No hay citas pendientes de atención.</p>
+                    </div>
+
+                    <a th:each="cita : ${citasVencidas}" th:href="@{/doctor/citas/{id}/atender(id=${cita.id})}"
+                        class="d-flex align-items-start gap-3 text-decoration-none mb-2"
+                        style="background-color: #fef3c7; border-radius: 10px; padding: 12px;">
+                        <i class="bi bi-exclamation-triangle" style="color: var(--lp-warning); font-size: 1.1rem; flex-shrink: 0;"></i>
+                        <div>
+                            <p class="fw-semibold mb-0" style="color: var(--lp-ink);">Cita sin atender</p>
+                            <p class="mb-0" style="font-size: 0.8rem; color: var(--lp-muted);"
+                                th:text="'Paciente: ' + ${cita.mascota.nombre} + ' · ' + ${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">
+                                Paciente</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="lp-card p-4" th:if="${!#lists.isEmpty(pacientesRecientes)}">
+                    <h2 class="lp-section-title mb-3">Pacientes recientes</h2>
+                    <div class="d-flex align-items-center">
+                        <a class="lp-avatar-stack-item" th:each="paciente, iter : ${pacientesRecientes}"
+                            th:href="@{/doctor/pacientes/{id}(id=${paciente.id})}" th:title="${paciente.nombre}"
+                            th:style="${iter.first} ? '' : 'margin-left: -12px;'"
+                            th:with="fotoPaciente=${paciente.fotoUrl != null and !#strings.isEmpty(paciente.fotoUrl)} ? ${paciente.fotoUrl} : (${paciente.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${paciente.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))">
+                            <img th:src="${fotoPaciente}" alt="" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: block;" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    (function () {
+        var filas = document.querySelectorAll('#agendaHoyLista .lp-agenda-row[data-href]');
+        if (filas.length > 0) {
+            filas[0].classList.add('lp-agenda-row-highlight');
+        }
+        document.querySelectorAll('.lp-agenda-row[data-href]').forEach(function (fila) {
+            fila.addEventListener('click', function () {
+                window.location.href = fila.getAttribute('data-href');
+            });
+        });
+    })();
+</script>
+</body>
+</html>

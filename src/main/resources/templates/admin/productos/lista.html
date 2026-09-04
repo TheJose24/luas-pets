@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Productos - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'productos')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Productos')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Productos')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Productos</h1>
+                <p class="lp-page-subtitle">Administra el catálogo de la tienda.</p>
+            </div>
+            <a th:href="@{/admin/productos/nuevo}" class="lp-btn-primary w-100 w-md-auto text-center flex-shrink-0">
+                <i class="bi bi-plus-lg me-1"></i>Agregar nuevo producto
+            </a>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${param.exito}">
+            <i class="bi bi-check-circle"></i> Producto creado correctamente
+        </div>
+        <div class="lp-alert lp-alert-success" th:if="${param.actualizado}">
+            <i class="bi bi-check-circle"></i> Producto actualizado correctamente
+        </div>
+
+        <div th:if="${#lists.isEmpty(productos)}" class="lp-card lp-empty-state">
+            <i class="bi bi-box-seam"></i>
+            <h5 class="fw-bold mb-1">No hay productos registrados</h5>
+            <p class="mb-3">Agrega el primer producto del catálogo.</p>
+            <a th:href="@{/admin/productos/nuevo}" class="lp-btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Agregar producto
+            </a>
+        </div>
+
+        <div class="lp-card p-0" th:unless="${#lists.isEmpty(productos)}">
+            <div class="table-responsive">
+                <table class="lp-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="producto : ${productos}">
+                            <td><img th:src="${producto.imagenUrl}" alt="Imagen" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" /></td>
+                            <td class="fw-semibold" th:text="${producto.nombre}">Nombre</td>
+                            <td><span class="lp-badge lp-badge-info" th:text="${producto.categoria}">Categoría</span></td>
+                            <td th:text="'S/ ' + ${#numbers.formatDecimal(producto.precio, 1, 2)}">S/ 0.00</td>
+                            <td th:text="${producto.stock}">0</td>
+                            <td>
+                                <span class="lp-badge" th:classappend="${producto.activo} ? 'lp-badge-success' : 'lp-badge-secondary'"
+                                    th:text="${producto.activo} ? 'Activo' : 'Inactivo'">Estado</span>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a th:href="@{/admin/productos/{id}/editar(id=${producto.id})}"
+                                        class="lp-btn-outline btn-sm py-1 px-2">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </a>
+
+                                    <th:block th:if="${producto.activo}">
+                                        <form th:id="|formDesactivarProducto${producto.id}|"
+                                            th:action="@{/admin/productos/{id}/desactivar(id=${producto.id})}" method="post" class="d-none">
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" th:attr="data-bs-target=|#modalDesactivarProducto${producto.id}|">
+                                            <i class="bi bi-slash-circle me-1"></i>Desactivar
+                                        </button>
+
+                                        <div class="modal fade" th:id="|modalDesactivarProducto${producto.id}|" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Desactivar producto</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <strong th:text="${producto.nombre}"></strong> dejará de aparecer en la tienda.
+                                                        Podrás reactivarlo después.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" th:attr="form=|formDesactivarProducto${producto.id}|" class="btn btn-danger">
+                                                            <i class="bi bi-slash-circle me-1"></i>Sí, desactivar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </th:block>
+                                    <form th:unless="${producto.activo}"
+                                        th:action="@{/admin/productos/{id}/activar(id=${producto.id})}" method="post">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-check-circle me-1"></i>Activar
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

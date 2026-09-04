@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mi carrito - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'tienda')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Mi carrito')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb('Tienda', '/cliente/tienda', 'Carrito')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Mi carrito</h1>
+                <p class="lp-page-subtitle">Revisa tu pedido antes de confirmarlo.</p>
+            </div>
+            <a th:href="@{/cliente/tienda}" class="lp-btn-outline w-100 w-md-auto text-center flex-shrink-0">
+                <i class="bi bi-arrow-left me-1"></i>Seguir comprando
+            </a>
+        </div>
+
+        <div class="lp-alert lp-alert-danger" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <div th:if="${#lists.isEmpty(items)}" class="lp-card lp-empty-state">
+            <i class="bi bi-cart-x"></i>
+            <h5 class="fw-bold mb-1">Tu carrito está vacío</h5>
+            <p class="mb-3">Explora la tienda y agrega productos para tu mascota.</p>
+            <a th:href="@{/cliente/tienda}" class="lp-btn-primary">
+                <i class="bi bi-shop me-1"></i>Ir a la tienda
+            </a>
+        </div>
+
+        <div class="row g-4" th:unless="${#lists.isEmpty(items)}">
+            <div class="col-12 col-lg-8">
+                <div class="lp-card p-0">
+                    <div class="table-responsive">
+                        <table class="lp-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th colspan="2">Producto</th>
+                                    <th>Precio unitario</th>
+                                    <th>Cantidad</th>
+                                    <th>Subtotal</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${items}">
+                                    <td style="width: 56px;">
+                                        <div class="rounded d-flex align-items-center justify-content-center"
+                                            style="width: 48px; height: 48px; background-color: var(--lp-primary-soft);">
+                                            <i class="bi bi-box-seam" style="color: var(--lp-primary);"></i>
+                                        </div>
+                                    </td>
+                                    <td class="fw-semibold" th:text="${item.nombreProducto}">Producto</td>
+                                    <td th:text="'S/ ' + ${#numbers.formatDecimal(item.precioUnitario, 1, 2)}">S/ 0.00</td>
+                                    <td>
+                                        <form th:action="@{/cliente/carrito/actualizar}" method="post"
+                                            class="d-flex gap-2 align-items-center">
+                                            <input type="hidden" name="productoId" th:value="${item.productoId}" />
+                                            <input type="number" class="form-control" name="cantidad" min="1"
+                                                th:value="${item.cantidad}" required style="max-width: 80px;" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td th:text="'S/ ' + ${#numbers.formatDecimal(item.subtotal, 1, 2)}">S/ 0.00</td>
+                                    <td>
+                                        <form th:id="|formEliminarItem${item.productoId}|"
+                                            th:action="@{/cliente/carrito/eliminar}" method="post" class="d-none">
+                                            <input type="hidden" name="productoId" th:value="${item.productoId}" />
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" th:attr="data-bs-target=|#modalEliminarItem${item.productoId}|">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+
+                                        <div class="modal fade" th:id="|modalEliminarItem${item.productoId}|" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Quitar producto</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        ¿Quitar <strong th:text="${item.nombreProducto}"></strong> de tu carrito?
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" th:attr="form=|formEliminarItem${item.productoId}|" class="btn btn-danger">
+                                                            <i class="bi bi-trash me-1"></i>Sí, quitar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4" style="position: sticky; top: 1rem;">
+                    <h6 class="text-uppercase small text-muted mb-2">Resumen del pedido</h6>
+                    <p class="mb-4" style="font-size: 1.75rem; font-weight: 700; color: var(--lp-primary);"
+                        th:text="'S/ ' + ${#numbers.formatDecimal(total, 1, 2)}">S/ 0.00</p>
+
+                    <form th:id="formConfirmarPedido" th:action="@{/cliente/carrito/confirmar}" method="post" class="d-none">
+                    </form>
+                    <button type="button" class="lp-btn-primary border-0 w-100 text-center"
+                        data-bs-toggle="modal" data-bs-target="#modalConfirmarPedido">
+                        <i class="bi bi-check-lg me-1"></i>Confirmar pedido
+                    </button>
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Esta es una compra simulada, no se procesará ningún pago real.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal fade" id="modalConfirmarPedido" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Confirmar pedido</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            Vas a confirmar un pedido por un total de
+                            <strong th:text="'S/ ' + ${#numbers.formatDecimal(total, 1, 2)}"></strong>.
+                            Recuerda que esta es una compra simulada, no se realizará ningún pago real.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" form="formConfirmarPedido" class="btn" style="background-color: var(--lp-primary); color: #fff;">
+                                <i class="bi bi-check-lg me-1"></i>Confirmar pedido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

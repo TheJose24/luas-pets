@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Iniciar sesión - Luas Pets</title>
+</head>
+<body>
+
+<style>
+    .lp-auth-form .form-control { padding: 12px 14px; border-color: var(--lp-border); }
+    .lp-auth-form .input-group-text { border-color: var(--lp-border); background-color: #fff; }
+    .lp-auth-form .input-group > :first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+    .lp-auth-form .input-group > :last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+    .lp-auth-form .form-control:focus { border-color: var(--lp-primary); box-shadow: 0 0 0 3px var(--lp-primary-tint); }
+</style>
+
+<div class="row g-0" style="min-height: 100vh;">
+    <div class="col-lg-6 d-flex align-items-center justify-content-center bg-white px-4 px-lg-5 py-5">
+        <div style="width: 100%; max-width: 400px;">
+            <a th:href="@{/}" class="d-flex align-items-center gap-2 text-decoration-none mb-5">
+                <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                    style="width: 40px; height: 40px; border-radius: 10px; background-color: var(--lp-primary-soft);">
+                    <i class="bi bi-heart-pulse-fill" style="color: var(--lp-primary);"></i>
+                </span>
+                <span style="font-weight: 600; font-size: 1.1rem; color: var(--lp-ink);">Luas Pets</span>
+            </a>
+
+            <h1 class="mb-1" style="font-size: 1.6rem; font-weight: 700; color: var(--lp-ink);">¡Bienvenido de nuevo!</h1>
+            <p class="mb-4" style="font-size: 0.95rem; color: var(--lp-body);">
+                Ingresa a tu cuenta para continuar con la gestión de tu mascota.
+            </p>
+
+            <div class="lp-alert lp-alert-danger" th:if="${param.error}">
+                <i class="bi bi-exclamation-circle"></i> Email o contraseña incorrectos
+            </div>
+            <div class="lp-alert lp-alert-success" th:if="${param.registrado}">
+                <i class="bi bi-check-circle"></i> Registro exitoso, ahora puedes iniciar sesión
+            </div>
+            <div class="lp-alert lp-alert-info" th:if="${param.logout}">
+                <i class="bi bi-info-circle"></i> Sesión cerrada correctamente
+            </div>
+
+            <form th:action="@{/login}" method="post" class="lp-auth-form needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="username" class="form-label" style="font-size: 0.9rem; font-weight: 500; color: var(--lp-ink);">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope" style="color: var(--lp-muted);"></i></span>
+                        <input type="email" class="form-control" id="username" name="username"
+                            placeholder="correo@ejemplo.com" required />
+                        <div class="invalid-feedback">Ingresa un correo válido</div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="form-label" style="font-size: 0.9rem; font-weight: 500; color: var(--lp-ink);">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock" style="color: var(--lp-muted);"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" required />
+                        <button type="button" class="btn input-group-text" id="togglePassword" style="cursor: pointer;">
+                            <i class="bi bi-eye" id="togglePasswordIcon" style="color: var(--lp-muted);"></i>
+                        </button>
+                        <div class="invalid-feedback">Ingresa tu contraseña</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="lp-btn-primary w-100 border-0 d-flex align-items-center justify-content-center gap-2"
+                    style="height: 48px;">
+                    Iniciar sesión<i class="bi bi-arrow-right"></i>
+                </button>
+            </form>
+
+            <hr class="my-4" style="border-color: var(--lp-border); opacity: 1;" />
+
+            <p class="text-center mb-0" style="color: var(--lp-body); font-size: 0.95rem;">
+                ¿No tienes una cuenta?
+                <a th:href="@{/registro}" style="color: var(--lp-primary); font-weight: 600;">Regístrate</a>
+            </p>
+        </div>
+    </div>
+
+    <div class="col-lg-6 d-none d-lg-block position-relative overflow-hidden">
+        <img th:src="@{/images/login.jpg}"
+            alt="Mascota en la clínica veterinaria"
+            style="width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0;" />
+
+        <div class="position-absolute d-flex align-items-center gap-3"
+            style="left: 2rem; right: 2rem; bottom: 2rem; background-color: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border-radius: 14px; padding: 1.25rem; box-shadow: 0 12px 30px rgba(16,24,40,0.15);">
+            <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--lp-primary-soft);">
+                <i class="bi bi-heart-fill" style="color: var(--lp-primary); font-size: 1.2rem;"></i>
+            </span>
+            <div>
+                <p class="mb-1" style="font-weight: 600; color: var(--lp-ink);">Gestión clínica simplificada</p>
+                <p class="mb-0" style="font-size: 0.88rem; color: var(--lp-body);">
+                    Agenda citas, consulta historiales médicos y compra accesorios en un solo lugar.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    (function () {
+        var toggle = document.getElementById('togglePassword');
+        var input = document.getElementById('password');
+        var icon = document.getElementById('togglePasswordIcon');
+        if (toggle && input && icon) {
+            toggle.addEventListener('click', function () {
+                var showing = input.getAttribute('type') === 'text';
+                input.setAttribute('type', showing ? 'password' : 'text');
+                icon.classList.toggle('bi-eye', showing);
+                icon.classList.toggle('bi-eye-slash', !showing);
+            });
+        }
+    })();
+</script>
+</body>
+</html>

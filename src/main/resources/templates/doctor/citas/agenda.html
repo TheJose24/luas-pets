@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mi agenda - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('doctor', 'citas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Portal Veterinario')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Mi agenda')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-start gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Mi agenda</h1>
+                <p class="lp-page-subtitle">Consulta y atiende las citas asignadas a ti.</p>
+            </div>
+            <span class="lp-chip flex-shrink-0" th:text="${#lists.size(citas)} + ' citas filtradas'">0 citas filtradas</span>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${param.atendida}">
+            <i class="bi bi-check-circle"></i> Historial médico registrado y cita marcada como atendida
+        </div>
+        <div class="lp-alert lp-alert-success" th:if="${exito}">
+            <i class="bi bi-check-circle"></i> <span th:text="${exito}"></span>
+        </div>
+        <div class="lp-alert lp-alert-danger" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <div class="d-flex flex-column flex-lg-row gap-3 align-items-lg-start mb-4">
+            <div class="lp-card p-3 flex-grow-1">
+                <form th:action="@{/doctor/citas}" method="get" class="row g-2 align-items-center">
+                    <input type="hidden" name="vista" th:value="${vista}" />
+                    <div class="col-12 col-md-6">
+                        <div class="lp-search">
+                            <i class="bi bi-search"></i>
+                            <input type="text" name="buscar" placeholder="Buscar mascota o propietario..." th:value="${buscar}" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <select class="form-select" name="estado" onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            <option value="PENDIENTE" th:selected="${estadoSel != null and estadoSel.name() == 'PENDIENTE'}">Pendiente</option>
+                            <option value="CONFIRMADA" th:selected="${estadoSel != null and estadoSel.name() == 'CONFIRMADA'}">Confirmada</option>
+                            <option value="ATENDIDA" th:selected="${estadoSel != null and estadoSel.name() == 'ATENDIDA'}">Atendida</option>
+                            <option value="CANCELADA" th:selected="${estadoSel != null and estadoSel.name() == 'CANCELADA'}">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3 d-flex gap-2">
+                        <button type="submit" class="lp-btn-primary flex-shrink-0">Filtrar</button>
+                        <a th:href="@{/doctor/citas(vista=${vista})}" class="lp-btn-outline flex-shrink-0" title="Limpiar filtros">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="lp-view-switch">
+                <a th:href="'/doctor/citas?vista=calendario' + ${queryFiltros}" th:classappend="${vista == 'calendario'} ? 'active'">
+                    <i class="bi bi-calendar3"></i> Calendario
+                </a>
+                <a th:href="'/doctor/citas?vista=lista' + ${queryFiltros}" th:classappend="${vista == 'lista'} ? 'active'">
+                    <i class="bi bi-list-ul"></i> Lista
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${vista == 'calendario'}" class="lp-card p-3">
+            <div th:replace="~{fragments/calendario :: semanal(${semana}, '/doctor/citas', ${queryFiltros})}"></div>
+        </div>
+
+        <div th:if="${vista != 'calendario'}">
+            <div th:if="${#lists.isEmpty(citas)}" class="lp-card lp-empty-state">
+                <i class="bi bi-calendar-x"></i>
+                <h5 class="fw-bold mb-1">No tienes citas agendadas</h5>
+                <p class="mb-0">Aquí aparecerán las citas que te asignen.</p>
+            </div>
+
+            <div class="lp-card p-0" th:unless="${#lists.isEmpty(citas)}">
+                <div class="table-responsive">
+                    <table class="lp-table mb-0">
+                        <thead>
+                            <tr>
+                                <th><i class="bi bi-heart me-1"></i>Mascota</th>
+                                <th><i class="bi bi-person me-1"></i>Dueño</th>
+                                <th><i class="bi bi-calendar3 me-1"></i>Fecha y hora</th>
+                                <th>Motivo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="cita : ${citas}">
+                                <td class="fw-semibold" th:text="${cita.mascota.nombre}">Mascota</td>
+                                <td th:text="${cita.mascota.cliente.nombre} + ' ' + ${cita.mascota.cliente.apellido}">Dueño</td>
+                                <td th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                                <td th:text="${cita.motivo}">Motivo</td>
+                                <td>
+                                    <span class="lp-badge"
+                                        th:classappend="${cita.estado.name() == 'PENDIENTE'} ? 'lp-badge-warning' :
+                                                         (${cita.estado.name() == 'CONFIRMADA'} ? 'lp-badge-info' :
+                                                         (${cita.estado.name() == 'ATENDIDA'} ? 'lp-badge-success' : 'lp-badge-secondary'))"
+                                        th:text="${cita.estado}">Estado</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a th:if="${cita.estado.name() != 'ATENDIDA' and cita.estado.name() != 'CANCELADA'}"
+                                            th:href="@{/doctor/citas/{id}/atender(id=${cita.id})}"
+                                            class="lp-btn-primary btn-sm py-1 px-2 border-0">
+                                            <i class="bi bi-clipboard-pulse me-1"></i>Atender
+                                        </a>
+                                        <a th:href="@{/doctor/pacientes/{id}(id=${cita.mascota.id})}"
+                                            class="lp-btn-outline btn-sm py-1 px-2">
+                                            <i class="bi bi-file-earmark-person me-1"></i>Ver ficha
+                                        </a>
+
+                                        <th:block th:if="${cita.estado.name() == 'PENDIENTE'}">
+                                            <form th:id="|formConfirmarCita${cita.id}|"
+                                                th:action="@{/doctor/citas/{id}/confirmar(id=${cita.id})}" method="post" class="d-none">
+                                            </form>
+                                            <button type="button" class="lp-btn-outline btn-sm py-1 px-2"
+                                                data-bs-toggle="modal" th:attr="data-bs-target=|#modalConfirmarCita${cita.id}|">
+                                                <i class="bi bi-check-lg me-1"></i>Confirmar
+                                            </button>
+
+                                            <div class="modal fade" th:id="|modalConfirmarCita${cita.id}|" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Confirmar cita</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            ¿Confirmas la cita de <strong th:text="${cita.mascota.nombre}"></strong> del
+                                                            <strong th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}"></strong>?
+                                                            El cliente verá la cita como confirmada.
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" th:attr="form=|formConfirmarCita${cita.id}|" class="btn btn-primary">
+                                                                <i class="bi bi-check-lg me-1"></i>Sí, confirmar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </th:block>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

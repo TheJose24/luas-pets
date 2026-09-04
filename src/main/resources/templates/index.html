@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Luas Pets</title>
+</head>
+<body>
+
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<!-- ============================================
+     HERO
+     ============================================ -->
+<div class="container py-5">
+    <div class="row align-items-center g-5 py-4">
+        <div class="col-12 col-lg-6 order-2 order-lg-1">
+            <span class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-3"
+                style="background-color: var(--lp-primary-tint); color: var(--lp-primary-dark); font-weight: 600; font-size: 0.85rem;">
+                <i class="bi bi-patch-check-fill"></i>Atención veterinaria de confianza
+            </span>
+            <h1 style="font-size: 3rem; font-weight: 800; color: var(--lp-ink); line-height: 1.15;" class="mb-4">
+                Cuidado tan único como
+                <span style="color: var(--lp-primary); border-bottom: 4px solid var(--lp-primary-soft); padding-bottom: 2px;">tu mascota</span>
+            </h1>
+            <p class="mb-4" style="font-size: 1.1rem; color: var(--lp-body); max-width: 32rem;">
+                En Luas Pets combinamos atención veterinaria profesional, seguimiento médico digital
+                y una tienda especializada para que el cuidado de tu compañero sea simple, cercano y
+                siempre a un clic de distancia.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+                <a th:href="@{/registro}" class="lp-btn-primary">
+                    Registrarse<i class="bi bi-arrow-right ms-2"></i>
+                </a>
+                <a href="#servicios" class="lp-btn-outline">Conocer más</a>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6 order-1 order-lg-2">
+            <img th:src="@{/images/hero.jpg}"
+                alt="Veterinario atendiendo a una mascota" class="img-fluid w-100"
+                style="border-radius: 16px; box-shadow: 0 20px 40px rgba(16, 24, 40, 0.12); object-fit: cover; max-height: 480px;" />
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     SERVICIOS
+     ============================================ -->
+<div id="servicios" class="container py-5">
+    <div class="text-center mx-auto mb-5" style="max-width: 40rem;">
+        <h2 class="lp-page-title">¿Qué puedes hacer?</h2>
+        <p class="lp-page-subtitle">Todo lo que tu mascota necesita, en un solo lugar.</p>
+    </div>
+    <div class="row g-4">
+        <div class="col-12 col-md-4">
+            <div class="lp-card h-100 p-4">
+                <div class="d-flex align-items-center justify-content-center mb-3"
+                    style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
+                    <i class="bi bi-calendar-check" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
+                </div>
+                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Agenda tus citas</h5>
+                <p class="mb-0" style="color: var(--lp-body);">Reserva, reprograma o cancela citas con nuestros doctores desde cualquier lugar.</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="lp-card h-100 p-4">
+                <div class="d-flex align-items-center justify-content-center mb-3"
+                    style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
+                    <i class="bi bi-file-medical" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
+                </div>
+                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Historial médico digital</h5>
+                <p class="mb-0" style="color: var(--lp-body);">Consulta diagnósticos y tratamientos de cada visita de tu mascota.</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="lp-card h-100 p-4">
+                <div class="d-flex align-items-center justify-content-center mb-3"
+                    style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
+                    <i class="bi bi-shop" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
+                </div>
+                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Tienda para mascotas</h5>
+                <p class="mb-0" style="color: var(--lp-body);">Encuentra alimento, juguetes, higiene y accesorios para tu compañero.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     NOSOTROS
+     ============================================ -->
+<div id="nosotros" class="py-5" style="background-color: var(--lp-surface);">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-12 col-lg-6">
+                <img th:src="@{/images/nosotros.jpg}"
+                    alt="Equipo veterinario de Luas Pets" class="img-fluid w-100"
+                    style="border-radius: 16px; box-shadow: 0 12px 30px rgba(16, 24, 40, 0.1); object-fit: cover; max-height: 420px;" />
+            </div>
+            <div class="col-12 col-lg-6">
+                <h2 class="lp-page-title">Sobre Luas Pets</h2>
+                <p class="mb-4" style="color: var(--lp-body); font-size: 1.05rem;">
+                    Somos una clínica veterinaria pensada para que el cuidado de tu mascota sea simple
+                    y transparente: agenda citas en línea, revisa el historial médico completo y
+                    mantente en contacto con nuestro equipo, todo desde una sola plataforma.
+                </p>
+                <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="bi bi-check-circle-fill mt-1" style="color: var(--lp-primary);"></i>
+                        <span style="color: var(--lp-ink);">Equipo de veterinarios certificados</span>
+                    </li>
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="bi bi-check-circle-fill mt-1" style="color: var(--lp-primary);"></i>
+                        <span style="color: var(--lp-ink);">Equipamiento moderno para diagnóstico</span>
+                    </li>
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="bi bi-check-circle-fill mt-1" style="color: var(--lp-primary);"></i>
+                        <span style="color: var(--lp-ink);">Historial médico siempre disponible en línea</span>
+                    </li>
+                    <li class="d-flex align-items-start gap-2">
+                        <i class="bi bi-check-circle-fill mt-1" style="color: var(--lp-primary);"></i>
+                        <span style="color: var(--lp-ink);">Seguimiento post-consulta personalizado</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     FOOTER
+     ============================================ -->
+<footer class="py-5" style="background-color: var(--lp-ink); color: rgba(255, 255, 255, 0.7);">
+    <div class="container">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="lp-icon-circle"><i class="bi bi-heart-pulse-fill"></i></span>
+            <span class="fw-bold text-white" style="font-size: 1.1rem;">Luas Pets</span>
+        </div>
+        <p class="small mb-3" style="max-width: 28rem;">
+            Cuidado veterinario integral para tu mascota: citas, historial médico y tienda especializada,
+            todo en un solo lugar.
+        </p>
+        <p class="mb-0 small">&copy; 2026 Luas Pets. Todos los derechos reservados.</p>
+    </div>
+</footer>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

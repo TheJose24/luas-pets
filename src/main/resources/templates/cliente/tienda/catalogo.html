@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Tienda - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'tienda')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Portal Cliente')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Tienda')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+
+        <ul class="nav lp-shop-tabs mb-4">
+            <li class="nav-item">
+                <a class="nav-link active" th:href="@{/cliente/tienda}">Catálogo de productos</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:href="@{/cliente/pedidos}">Mis pedidos</a>
+            </li>
+        </ul>
+
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-3">
+            <div>
+                <h1 class="lp-page-title">Tienda Luas Pets</h1>
+                <p class="lp-page-subtitle">Productos para el cuidado, bienestar y comodidad de tus mascotas.</p>
+            </div>
+            <button type="button" id="btnAbrirCarrito" class="lp-btn-primary flex-shrink-0 position-relative"
+                data-bs-toggle="offcanvas" data-bs-target="#carritoPanel" aria-controls="carritoPanel">
+                <i class="bi bi-cart3 me-1"></i>Carrito
+                <span id="carritoContador" class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                    style="background-color: #ffffff; color: var(--lp-primary); font-size: 0.7rem;">0</span>
+            </button>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${exito}">
+            <i class="bi bi-check-circle"></i> <span th:text="${exito}"></span>
+        </div>
+        <div class="lp-alert lp-alert-danger" th:if="${error}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+        </div>
+
+        <div class="lp-alert lp-alert-info">
+            <i class="bi bi-info-circle"></i>
+            Tienda de demostración: los pedidos son simulados y no se realiza ningún pago real.
+        </div>
+
+        <div class="lp-card p-3 mb-4">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a th:href="@{/cliente/tienda(orden=${orden}, buscar=${buscar})}" class="lp-chip"
+                    th:classappend="${categoriaSel == null or categoriaSel == ''} ? 'active'">Todos</a>
+                <a th:each="cat : ${categorias}" th:href="@{/cliente/tienda(categoria=${cat}, orden=${orden}, buscar=${buscar})}"
+                    class="lp-chip" th:classappend="${cat == categoriaSel} ? 'active'" th:text="${cat}">Categoría</a>
+            </div>
+
+            <form th:action="@{/cliente/tienda}" method="get" class="row g-2 align-items-center">
+                <input type="hidden" name="categoria" th:value="${categoriaSel}" />
+                <div class="col-12 col-md-8">
+                    <div class="lp-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="buscar" placeholder="Buscar productos..." th:value="${buscar}" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <select class="form-select" name="orden" onchange="this.form.submit()">
+                        <option value="nombre" th:selected="${orden == 'nombre'}">Nombre A-Z</option>
+                        <option value="precio_asc" th:selected="${orden == 'precio_asc'}">Precio: menor a mayor</option>
+                        <option value="precio_desc" th:selected="${orden == 'precio_desc'}">Precio: mayor a menor</option>
+                        <option value="recientes" th:selected="${orden == 'recientes'}">Más recientes</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <div th:if="${#lists.isEmpty(productos)}" class="lp-card lp-empty-state">
+            <i class="bi bi-search"></i>
+            <h5 class="fw-bold mb-1">No se encontraron productos</h5>
+            <p class="mb-3">Prueba con otra categoría o término de búsqueda.</p>
+            <a th:href="@{/cliente/tienda}" class="lp-btn-primary">Limpiar filtros</a>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(productos)}" class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
+            <div class="col" th:each="producto : ${productos}">
+                <div class="lp-product-card lp-card-hover h-100 d-flex flex-column">
+                    <div class="lp-product-media">
+                        <img th:src="${producto.imagenUrl}" alt="Imagen del producto" />
+                        <span class="lp-product-stock-badge" th:classappend="'text-' + ${producto.varianteStock}"
+                            th:text="${producto.etiquetaStock}">Disponible</span>
+                    </div>
+                    <div class="lp-product-body d-flex flex-column flex-grow-1">
+                        <span class="lp-product-category" th:text="${producto.categoriaMayuscula}">CATEGORÍA</span>
+                        <p class="lp-product-name mb-0" th:text="${producto.nombre}">Nombre</p>
+                        <p class="lp-product-desc mb-2" th:text="${producto.descripcionCorta}">Descripción</p>
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span style="font-size: 1.15rem; font-weight: 700; color: var(--lp-ink);" th:text="${producto.precioTexto}">S/ 0.00</span>
+                            <form th:if="${producto.disponible}" th:action="@{/cliente/tienda/agregar}" method="post"
+                                class="lp-form-agregar-carrito d-inline">
+                                <input type="hidden" name="productoId" th:value="${producto.id}" />
+                                <input type="hidden" name="cantidad" value="1" />
+                                <button type="submit" class="lp-btn-primary btn-sm py-1 px-2 lp-btn-agregar-carrito"
+                                    th:attr="data-producto-id=${producto.id}, data-stock=${producto.stock}">
+                                    <i class="bi bi-plus"></i> Agregar
+                                </button>
+                            </form>
+                            <button type="button" class="lp-btn-outline btn-sm py-1 px-2" th:unless="${producto.disponible}" disabled>
+                                Agotado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: carritoPanel}"></div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

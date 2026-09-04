@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Panel del Cliente - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'dashboard')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Portal Cliente')}"></div>
+
+    <div class="container-fluid p-4">
+        <div class="mb-4">
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: var(--lp-ink); line-height: 1.15;">
+                ¡Hola, <span th:text="${usuario.nombre}">Cliente</span>!
+            </h1>
+            <p class="mb-0" style="color: var(--lp-body);">Todo listo para cuidar a tus mascotas.</p>
+        </div>
+
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4">
+            <div class="col">
+                <div class="lp-metric-card lp-metric-primary h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="lp-metric-label">Mis mascotas</span>
+                        <span class="lp-metric-icon"><i class="bi bi-heart-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalMascotas}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-info h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="lp-metric-label">Próximas citas</span>
+                        <span class="lp-metric-icon"><i class="bi bi-calendar-check-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${citasProximas}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-warning h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="lp-metric-label">Citas pendientes</span>
+                        <span class="lp-metric-icon"><i class="bi bi-clock-history"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${citasPendientes}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-neutral h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="lp-metric-label">Pedidos realizados</span>
+                        <span class="lp-metric-icon"><i class="bi bi-bag-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalPedidos}">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="col-12 col-lg-8">
+                <h2 class="lp-section-title">Próxima cita</h2>
+
+                <div class="mb-4" th:if="${proximaCita != null}"
+                    th:with="fotoProxima=${proximaCita.mascota.fotoUrl != null and !#strings.isEmpty(proximaCita.mascota.fotoUrl)} ? ${proximaCita.mascota.fotoUrl} : (${proximaCita.mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${proximaCita.mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))"
+                    style="background: linear-gradient(135deg, var(--lp-primary), var(--lp-primary-dark)); border-radius: 16px; padding: 24px; color: #ffffff;">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <img th:src="${fotoProxima}" alt="Foto de la mascota"
+                                style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+                            <div>
+                                <p class="mb-0" style="font-size: 1.35rem; font-weight: 700; color: #ffffff;"
+                                    th:text="${proximaCita.mascota.nombre} + ' (' + ${proximaCita.mascota.raza} + ')'">Mascota (Raza)</p>
+                                <p class="mb-0" style="color: rgba(255,255,255,0.85);"
+                                    th:text="${proximaCita.motivo} + ' · Dr. ' + ${proximaCita.doctor.nombre}">Motivo · Doctor</p>
+                            </div>
+                        </div>
+                        <span class="lp-badge flex-shrink-0" style="background-color: rgba(255,255,255,0.25); color: #ffffff;"
+                            th:text="${proximaCita.estado}">Estado</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mb-4"
+                        style="background-color: rgba(255,255,255,0.15); border-radius: 10px; padding: 14px;">
+                        <i class="bi bi-clock"></i>
+                        <span style="font-weight: 600;"
+                            th:text="${#temporals.format(proximaCita.fechaHora, 'dd/MM/yyyy · HH:mm')} + ' hrs'">Fecha</span>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <a th:href="@{/cliente/citas/{id}/reprogramar(id=${proximaCita.id})}"
+                            style="background-color: #ffffff; color: var(--lp-primary); border-radius: 10px; padding: 10px 20px; font-weight: 600; text-decoration: none;">
+                            Reprogramar
+                        </a>
+                        <a th:href="@{/cliente/citas}" style="color: #ffffff; text-decoration: underline; font-weight: 600;">
+                            Ver todas mis citas
+                        </a>
+                    </div>
+                </div>
+
+                <div class="lp-card lp-empty-state mb-4" th:if="${proximaCita == null}">
+                    <i class="bi bi-calendar-x"></i>
+                    <p class="mb-3">No tienes citas próximas</p>
+                    <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary">Agendar cita</a>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="lp-section-title mb-0">Mis mascotas</h2>
+                    <a th:href="@{/cliente/mascotas}" class="fw-medium text-decoration-none" style="color: var(--lp-primary);">Ver todas</a>
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-3 g-3">
+                    <div class="col" th:each="mascota, iter : ${mascotas}" th:if="${iter.index < 2}"
+                        th:with="fotoMini=${mascota.fotoUrl != null and !#strings.isEmpty(mascota.fotoUrl)} ? ${mascota.fotoUrl} : (${mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))">
+                        <div class="lp-pet-card h-100">
+                            <img th:src="${fotoMini}" alt="Foto de la mascota" style="height: 140px;" />
+                            <div class="lp-pet-body">
+                                <p class="lp-pet-name mb-0" th:text="${mascota.nombre}">Nombre</p>
+                                <p class="lp-pet-meta" th:text="${mascota.especie} + ' · ' + ${mascota.raza}">Especie · Raza</p>
+                                <a th:href="@{/cliente/mascotas/{id}(id=${mascota.id})}" class="lp-btn-outline w-100 text-center">
+                                    Ver perfil
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <a th:href="@{/cliente/mascotas/nueva}" class="d-flex flex-column align-items-center justify-content-center text-decoration-none h-100"
+                            style="border: 2px dashed var(--lp-border); border-radius: 14px; min-height: 220px; background-color: transparent;">
+                            <span class="d-inline-flex align-items-center justify-content-center mb-2"
+                                style="width: 48px; height: 48px; border-radius: 50%; background-color: var(--lp-bg); color: var(--lp-body);">
+                                <i class="bi bi-plus-lg fs-4"></i>
+                            </span>
+                            <span class="fw-medium" style="color: var(--lp-body);">Agregar mascota</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA -->
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4 mb-4">
+                    <h2 class="lp-section-title mb-3">Acciones rápidas</h2>
+                    <div class="d-flex flex-column gap-2">
+                        <a th:href="@{/cliente/citas/nueva}" class="lp-quick-action">
+                            <span class="lp-quick-action-icon"><i class="bi bi-calendar-plus"></i></span>
+                            <span class="lp-quick-action-label">Agendar cita</span>
+                        </a>
+                        <a th:href="@{/cliente/mascotas/nueva}" class="lp-quick-action">
+                            <span class="lp-quick-action-icon"><i class="bi bi-plus-circle"></i></span>
+                            <span class="lp-quick-action-label">Agregar mascota</span>
+                        </a>
+                        <a th:href="@{/cliente/tienda}" class="lp-quick-action">
+                            <span class="lp-quick-action-icon"><i class="bi bi-shop"></i></span>
+                            <span class="lp-quick-action-label">Ir a la tienda</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="lp-card p-4">
+                    <h2 class="lp-section-title mb-3">Actividad reciente</h2>
+
+                    <div th:if="${#lists.isEmpty(actividadReciente)}" class="lp-empty-state py-3">
+                        <i class="bi bi-calendar-x"></i>
+                        <p class="mb-0">Aún no tienes citas registradas.</p>
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(actividadReciente)}">
+                        <div class="lp-timeline-item" th:each="cita, iter : ${actividadReciente}"
+                            th:classappend="${iter.index == 0} ? 'lp-timeline-active' : ''">
+                            <p class="fw-medium mb-0" style="color: var(--lp-ink);"
+                                th:text="(${cita.estado.name() == 'PENDIENTE'} ? 'Cita agendada' :
+                                          (${cita.estado.name() == 'CONFIRMADA'} ? 'Cita confirmada' :
+                                          (${cita.estado.name() == 'ATENDIDA'} ? 'Consulta realizada' : 'Cita cancelada'))) + ' - ' + ${cita.mascota.nombre}">
+                                Cita agendada - Mascota</p>
+                            <p class="mb-0" style="font-size: 0.8rem; color: var(--lp-muted);"
+                                th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

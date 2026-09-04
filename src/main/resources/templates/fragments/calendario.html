@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Deliberadamente sin botón "Confirmar" aquí: las tarjetas de esta rejilla son
+    compactas y ya son clicables como enlace completo (hacia atender o hacia la
+    ficha del paciente, según el generador de URL que reciba el llamador); un
+    botón adicional dentro de la tarjeta competiría con ese clic y no cabe bien
+    en el espacio disponible. Confirmar solo está disponible en la vista de
+    lista (doctor/citas/agenda.html, admin/citas/lista.html) y en la card
+    "Siguiente cita" del dashboard del doctor.
+-->
+<div th:fragment="semanal(semana, baseUrl, queryFiltros)">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span style="font-size: 1.05rem; font-weight: 600; color: var(--lp-ink);" th:text="${semana.tituloSemana}">Semana</span>
+            <div class="d-flex align-items-center gap-1">
+                <a class="lp-icon-btn" aria-label="Semana anterior"
+                    th:href="${baseUrl} + '?vista=calendario&semana=' + ${semana.semanaAnteriorIso} + ${queryFiltros}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <a class="lp-btn-outline btn-sm py-1 px-2" th:href="${baseUrl} + '?vista=calendario' + ${queryFiltros}">Hoy</a>
+                <a class="lp-icon-btn" aria-label="Semana siguiente"
+                    th:href="${baseUrl} + '?vista=calendario&semana=' + ${semana.semanaSiguienteIso} + ${queryFiltros}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="lp-cal-legend">
+            <span class="lp-cal-legend-item"><span class="lp-cal-legend-dot" style="background-color: var(--lp-warning);"></span>Pendiente</span>
+            <span class="lp-cal-legend-item"><span class="lp-cal-legend-dot" style="background-color: var(--lp-info);"></span>Confirmada</span>
+            <span class="lp-cal-legend-item"><span class="lp-cal-legend-dot" style="background-color: var(--lp-success);"></span>Atendida</span>
+            <span class="lp-cal-legend-item"><span class="lp-cal-legend-dot" style="background-color: var(--lp-muted);"></span>Cancelada</span>
+        </div>
+    </div>
+
+    <div class="lp-cal-scroll-hint">
+        <i class="bi bi-arrow-left-right"></i> Desliza para ver toda la semana
+    </div>
+
+    <div class="lp-cal-wrapper position-relative">
+        <div class="lp-cal-empty-overlay" th:if="${semana.totalCitasSemana == 0}">
+            No hay citas en esta semana.
+        </div>
+
+        <div class="lp-cal-grid">
+            <div class="lp-cal-corner"></div>
+            <div class="lp-cal-day-header" th:each="dia : ${semana.dias}" th:classappend="${dia.esHoy} ? 'lp-cal-today'">
+                <span class="lp-cal-day-name" th:text="${dia.esHoy} ? (${dia.nombreDia} + ' (Hoy)') : ${dia.nombreDia}">Lun</span>
+                <span class="lp-cal-day-number" th:text="${dia.numeroDia}">1</span>
+            </div>
+
+            <th:block th:each="fila : ${semana.filas}">
+                <div class="lp-cal-hour" th:text="${fila.horaTexto}">08:00</div>
+                <div class="lp-cal-cell" th:each="columna, iterDia : ${fila.columnas}"
+                    th:classappend="${semana.dias[iterDia.index].esHoy} ? 'lp-cal-today'">
+
+                    <div th:each="c : ${columna}">
+                        <a th:if="${c.url != null and !#strings.isEmpty(c.url)}" th:href="${c.url}"
+                            class="lp-cal-card" th:title="${c.mascotaNombre} + ' · ' + ${c.horaTexto} + ' · ' + ${c.doctorNombre} + ' · ' + ${c.propietarioNombre} + ' · ' + ${c.motivo}"
+                            th:style="${c.estadoVariante == 'warning'} ? 'background-color:#fef3c7;border-left-color:var(--lp-warning);' :
+                                       (${c.estadoVariante == 'info'} ? 'background-color:#dbeafe;border-left-color:var(--lp-info);' :
+                                       (${c.estadoVariante == 'success'} ? 'background-color:var(--lp-primary-soft);border-left-color:var(--lp-success);' :
+                                       'background-color:#e5e7eb;border-left-color:var(--lp-muted);'))">
+                            <div class="lp-cal-card-header">
+                                <span class="lp-cal-avatar-wrap">
+                                    <img class="lp-cal-card-avatar" th:src="${c.mascotaFotoUrl}" alt=""
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <span class="lp-cal-avatar-fallback" th:text="${c.mascotaInicial}">?</span>
+                                </span>
+                                <span class="lp-cal-card-name" th:if="${!c.fueraDeRango}" th:text="${c.mascotaNombre}">Nombre</span>
+                                <span class="lp-cal-card-name" th:if="${c.fueraDeRango}">
+                                    <strong th:text="${c.horaTexto}">08:00</strong> <span th:text="${c.mascotaNombre}">Nombre</span>
+                                </span>
+                            </div>
+                            <p class="lp-cal-card-motivo mb-0" th:text="${c.motivo}">Motivo</p>
+                            <span class="lp-badge" style="font-size: 0.62rem; padding: 1px 6px;"
+                                th:classappend="'lp-badge-' + ${c.estadoVariante}" th:text="${c.estadoTexto}">Estado</span>
+                        </a>
+
+                        <div th:unless="${c.url != null and !#strings.isEmpty(c.url)}"
+                            class="lp-cal-card" th:title="${c.mascotaNombre} + ' · ' + ${c.horaTexto} + ' · ' + ${c.doctorNombre} + ' · ' + ${c.propietarioNombre} + ' · ' + ${c.motivo}"
+                            th:style="${c.estadoVariante == 'warning'} ? 'background-color:#fef3c7;border-left-color:var(--lp-warning);' :
+                                       (${c.estadoVariante == 'info'} ? 'background-color:#dbeafe;border-left-color:var(--lp-info);' :
+                                       (${c.estadoVariante == 'success'} ? 'background-color:var(--lp-primary-soft);border-left-color:var(--lp-success);' :
+                                       'background-color:#e5e7eb;border-left-color:var(--lp-muted);'))">
+                            <div class="lp-cal-card-header">
+                                <span class="lp-cal-avatar-wrap">
+                                    <img class="lp-cal-card-avatar" th:src="${c.mascotaFotoUrl}" alt=""
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <span class="lp-cal-avatar-fallback" th:text="${c.mascotaInicial}">?</span>
+                                </span>
+                                <span class="lp-cal-card-name" th:if="${!c.fueraDeRango}" th:text="${c.mascotaNombre}">Nombre</span>
+                                <span class="lp-cal-card-name" th:if="${c.fueraDeRango}">
+                                    <strong th:text="${c.horaTexto}">08:00</strong> <span th:text="${c.mascotaNombre}">Nombre</span>
+                                </span>
+                            </div>
+                            <p class="lp-cal-card-motivo mb-0" th:text="${c.motivo}">Motivo</p>
+                            <span class="lp-badge" style="font-size: 0.62rem; padding: 1px 6px;"
+                                th:classappend="'lp-badge-' + ${c.estadoVariante}" th:text="${c.estadoTexto}">Estado</span>
+                        </div>
+                    </div>
+                </div>
+            </th:block>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

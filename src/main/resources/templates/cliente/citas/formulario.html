@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Agendar cita - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'citas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Agendar cita')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb('Mis citas', '/cliente/citas', 'Agendar cita')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <a th:href="@{/cliente/citas}" class="lp-btn-outline mb-3 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+
+        <div class="mb-4">
+            <h1 class="lp-page-title">Agendar nueva cita</h1>
+            <p class="lp-page-subtitle">Elige a tu mascota, un doctor y el horario que prefieras.</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="lp-alert lp-alert-danger" th:if="${error}">
+                    <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+                </div>
+
+                <div th:if="${#lists.isEmpty(mascotas)}" class="lp-card lp-empty-state">
+                    <i class="bi bi-heart"></i>
+                    <h5 class="fw-bold mb-1">Necesitas una mascota primero</h5>
+                    <p class="mb-3">Registra una mascota para poder agendar una cita.</p>
+                    <a th:href="@{/cliente/mascotas/nueva}" class="lp-btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Registrar mascota
+                    </a>
+                </div>
+
+                <div class="lp-card p-4 p-md-5" th:unless="${#lists.isEmpty(mascotas)}">
+                    <form th:action="@{/cliente/citas/nueva}" method="post" class="needs-validation" novalidate>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="mascotaId" class="form-label fw-medium">Mascota</label>
+                                <select class="form-select" id="mascotaId" name="mascotaId" required>
+                                    <option value="">Selecciona una mascota</option>
+                                    <option th:each="mascota : ${mascotas}" th:value="${mascota.id}"
+                                        th:text="${mascota.nombre}"></option>
+                                </select>
+                                <div class="invalid-feedback">Selecciona una mascota</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="doctorId" class="form-label fw-medium">Doctor</label>
+                                <select class="form-select" id="doctorId" name="doctorId" required>
+                                    <option value="">Selecciona un doctor</option>
+                                    <option th:each="doctor : ${doctores}" th:value="${doctor.id}"
+                                        th:text="${doctor.nombre} + ' ' + ${doctor.apellido}"></option>
+                                </select>
+                                <div class="invalid-feedback">Selecciona un doctor</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="fechaHora" class="form-label fw-medium">Fecha y hora</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+                                    <input type="datetime-local" class="form-control" id="fechaHora" name="fechaHora"
+                                        th:min="${minFechaHora}"
+                                        required />
+                                    <div class="invalid-feedback">Selecciona una fecha y hora válida (no puede ser en el pasado)</div>
+                                </div>
+                                <div class="form-text">Selecciona fecha y hora. El horario de atención es de 8:00 a 20:00.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="motivo" class="form-label fw-medium">Motivo</label>
+                                <textarea class="form-control" id="motivo" name="motivo" rows="3" required></textarea>
+                                <div class="invalid-feedback">Describe brevemente el motivo de la cita</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/cliente/citas}" class="lp-btn-outline">
+                                <i class="bi bi-arrow-left me-1"></i>Volver
+                            </a>
+                            <button type="submit" class="lp-btn-primary border-0">
+                                <i class="bi bi-calendar-check me-1"></i>Agendar cita
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

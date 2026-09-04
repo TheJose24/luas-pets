@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Todos los pedidos - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'pedidos')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Todos los pedidos')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Pedidos')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="mb-4">
+            <h1 class="lp-page-title">Todos los pedidos</h1>
+            <p class="lp-page-subtitle">Supervisa los pedidos realizados en la tienda.</p>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${exito}">
+            <i class="bi bi-check-circle"></i> <span th:text="${exito}"></span>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <a th:href="@{/admin/pedidos}" th:classappend="${estadoFiltro == null} ? 'active'"
+                class="lp-chip">Todos</a>
+            <a th:href="@{/admin/pedidos(estado='PENDIENTE')}"
+                th:classappend="${estadoFiltro != null and estadoFiltro.name() == 'PENDIENTE'} ? 'active'"
+                class="lp-chip">Pendiente</a>
+            <a th:href="@{/admin/pedidos(estado='CONFIRMADO')}"
+                th:classappend="${estadoFiltro != null and estadoFiltro.name() == 'CONFIRMADO'} ? 'active'"
+                class="lp-chip">Confirmado</a>
+            <a th:href="@{/admin/pedidos(estado='ENTREGADO')}"
+                th:classappend="${estadoFiltro != null and estadoFiltro.name() == 'ENTREGADO'} ? 'active'"
+                class="lp-chip">Entregado</a>
+        </div>
+
+        <div th:if="${#lists.isEmpty(pedidos)}" class="lp-card lp-empty-state">
+            <i class="bi bi-bag-x"></i>
+            <h5 class="fw-bold mb-1">No hay pedidos registrados para este filtro</h5>
+        </div>
+
+        <div class="lp-card p-0" th:unless="${#lists.isEmpty(pedidos)}">
+            <div class="table-responsive">
+                <table class="lp-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th><i class="bi bi-person me-1"></i>Cliente</th>
+                            <th><i class="bi bi-calendar3 me-1"></i>Fecha</th>
+                            <th>Productos</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="pedido : ${pedidos}">
+                            <td th:text="${pedido.id}">1</td>
+                            <td class="fw-semibold" th:text="${pedido.cliente.nombre} + ' ' + ${pedido.cliente.apellido}">Cliente</td>
+                            <td th:text="${#temporals.format(pedido.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</td>
+                            <td th:text="${#lists.size(pedido.detalles)}">0</td>
+                            <td th:text="'S/ ' + ${#numbers.formatDecimal(pedido.total, 1, 2)}">S/ 0.00</td>
+                            <td>
+                                <span class="lp-badge"
+                                    th:classappend="${pedido.estado.name() == 'PENDIENTE'} ? 'lp-badge-warning' :
+                                                     (${pedido.estado.name() == 'CONFIRMADO'} ? 'lp-badge-info' : 'lp-badge-success')"
+                                    th:text="${pedido.estado}">Estado</span>
+                            </td>
+                            <td>
+                                <a th:href="@{/admin/pedidos/{id}(id=${pedido.id})}"
+                                    class="lp-btn-outline btn-sm py-1 px-2">
+                                    <i class="bi bi-eye me-1"></i>Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

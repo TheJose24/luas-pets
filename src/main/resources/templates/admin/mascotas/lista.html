@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mascotas - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'mascotas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Panel Administrativo')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Mascotas')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Gestión de mascotas</h1>
+                <p class="lp-page-subtitle">Consulta y administra la información de las mascotas registradas en el sistema.</p>
+            </div>
+            <span class="lp-chip flex-shrink-0" th:text="${page.totalElements} + ' mascotas registradas'">0 mascotas registradas</span>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${exito != null}">
+            <i class="bi bi-check-circle"></i> <span th:text="${exito}">Estado actualizado</span>
+        </div>
+
+        <div class="lp-card p-3 mb-4">
+            <form th:action="@{/admin/mascotas}" method="get" class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="lp-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="buscar" placeholder="Buscar por nombre de mascota..." th:value="${buscar}" />
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select class="form-select" name="especie" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option th:each="e : ${especies}" th:value="${e}" th:text="${e}" th:selected="${e == especieSel}"></option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select class="form-select" name="raza" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option th:each="r : ${razas}" th:value="${r}" th:text="${r}" th:selected="${r == razaSel}"></option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select class="form-select" name="estado" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option th:each="es : ${estados}" th:value="${es}" th:selected="${es == estadoSel}"
+                            th:text="${es.name() == 'ACTIVO'} ? 'Activo' : (${es.name() == 'EN_TRATAMIENTO'} ? 'En tratamiento' : 'Inactivo')"></option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2 d-flex gap-2">
+                    <button type="submit" class="lp-btn-primary flex-shrink-0">Filtrar</button>
+                    <a th:href="@{/admin/mascotas}" class="lp-btn-outline flex-shrink-0" title="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div th:if="${#lists.isEmpty(filas)}" class="lp-card lp-empty-state">
+            <i class="bi bi-search"></i>
+            <h5 class="fw-bold mb-1">No se encontraron mascotas con esos criterios.</h5>
+            <a th:href="@{/admin/mascotas}" class="lp-btn-primary mt-2">Limpiar filtros</a>
+        </div>
+
+        <div class="lp-card p-0" th:unless="${#lists.isEmpty(filas)}">
+            <div class="table-responsive">
+                <table class="lp-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Mascota</th>
+                            <th>Especie</th>
+                            <th>Raza</th>
+                            <th>Edad / Nacimiento</th>
+                            <th>Propietario</th>
+                            <th>Última consulta</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="fila : ${filas}">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img th:src="${fila.fotoUrl}" alt="Foto de la mascota"
+                                        style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />
+                                    <div>
+                                        <p class="mb-0 fw-semibold" style="color: var(--lp-ink);" th:text="${fila.nombre}">Nombre</p>
+                                        <p class="mb-0" style="font-size: 0.75rem; color: var(--lp-muted);" th:text="${fila.codigo}">#MP-0001</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td th:text="${fila.especie}">Especie</td>
+                            <td th:text="${fila.raza}">Raza</td>
+                            <td>
+                                <p class="mb-0 fw-medium" style="color: var(--lp-ink);" th:text="${fila.edadTexto}">Edad</p>
+                                <p class="mb-0" style="font-size: 0.78rem; color: var(--lp-muted);" th:text="${fila.fechaNacimientoTexto}">Fecha</p>
+                            </td>
+                            <td>
+                                <p class="mb-0 fw-medium" style="color: var(--lp-ink);" th:text="${fila.propietarioNombre}">Propietario</p>
+                                <p class="mb-0" style="font-size: 0.78rem; color: var(--lp-muted);" th:text="${fila.propietarioTelefono}">Teléfono</p>
+                            </td>
+                            <td th:text="${fila.ultimaConsultaTexto}">Última consulta</td>
+                            <td>
+                                <span class="lp-badge" th:classappend="'lp-badge-' + ${fila.estadoVariante}" th:text="${fila.estadoTexto}">Estado</span>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="lp-btn-outline btn-sm py-1 px-2 dropdown-toggle lp-dropdown-cambiar-estado" type="button"
+                                        data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                                        Cambiar estado
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li th:each="opcion : ${estados}" th:if="${opcion != fila.estado}">
+                                            <form th:action="@{/admin/mascotas/{id}/estado(id=${fila.id})}" method="post">
+                                                <input type="hidden" name="nuevoEstado" th:value="${opcion}" />
+                                                <input type="hidden" name="buscar" th:value="${buscar}" />
+                                                <input type="hidden" name="especie" th:value="${especieSel}" />
+                                                <input type="hidden" name="raza" th:value="${razaSel}" />
+                                                <input type="hidden" name="estado" th:value="${estadoSel}" />
+                                                <input type="hidden" name="page" th:value="${page.number}" />
+                                                <button type="submit" class="dropdown-item"
+                                                    th:text="${opcion.name() == 'ACTIVO'} ? 'Marcar como Activo' :
+                                                              (${opcion.name() == 'EN_TRATAMIENTO'} ? 'Marcar como En tratamiento' : 'Marcar como Inactivo')">
+                                                    Marcar como
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3">
+                <span class="small" style="color: var(--lp-body);"
+                    th:text="'Mostrando ' + ${desde} + '-' + ${hasta} + ' de ' + ${page.totalElements} + ' resultados'">
+                    Mostrando</span>
+
+                <nav th:if="${page.totalPages > 1}" aria-label="Paginación de mascotas">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" th:if="${!page.first}">
+                            <a class="page-link"
+                                th:href="@{/admin/mascotas(buscar=${buscar}, especie=${especieSel}, raza=${razaSel}, estado=${estadoSel}, page=${page.number - 1})}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item disabled" th:if="${page.first}">
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        </li>
+
+                        <li class="page-item" th:each="numero : ${#numbers.sequence(0, page.totalPages - 1)}"
+                            th:classappend="${numero == page.number} ? 'active'">
+                            <a class="page-link"
+                                th:href="@{/admin/mascotas(buscar=${buscar}, especie=${especieSel}, raza=${razaSel}, estado=${estadoSel}, page=${numero})}"
+                                th:text="${numero + 1}">1</a>
+                        </li>
+
+                        <li class="page-item" th:if="${!page.last}">
+                            <a class="page-link"
+                                th:href="@{/admin/mascotas(buscar=${buscar}, especie=${especieSel}, raza=${razaSel}, estado=${estadoSel}, page=${page.number + 1})}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item disabled" th:if="${page.last}">
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    document.querySelectorAll('.lp-dropdown-cambiar-estado').forEach(function (toggle) {
+        new bootstrap.Dropdown(toggle, {
+            boundary: 'viewport',
+            popperConfig: function (defaultConfig) {
+                return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+            }
+        });
+    });
+</script>
+</body>
+</html>

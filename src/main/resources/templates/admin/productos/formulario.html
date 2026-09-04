@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Producto - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'productos')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Producto')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb('Productos', '/admin/productos', ${esEdicion} ? 'Editar producto' : 'Nuevo producto')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <a th:href="@{/admin/productos}" class="lp-btn-outline mb-3 d-inline-block">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+
+        <div class="mb-4">
+            <h1 class="lp-page-title" th:text="${esEdicion} ? 'Editar producto' : 'Nuevo producto'">Producto</h1>
+            <p class="lp-page-subtitle" th:text="${esEdicion} ? 'Actualiza la información del producto.' : 'Agrega un nuevo producto al catálogo de la tienda.'">Subtítulo</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="lp-card p-4 p-md-5">
+                    <form th:action="${esEdicion} ? @{/admin/productos/{id}/editar(id=${producto.id})} : @{/admin/productos/nuevo}"
+                        th:object="${producto}" method="post" class="needs-validation" novalidate>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="nombre" class="form-label fw-medium">Nombre</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
+                                    <input type="text" class="form-control" id="nombre" th:field="*{nombre}" required />
+                                    <div class="invalid-feedback">Ingresa el nombre del producto</div>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="descripcion" class="form-label fw-medium">Descripción</label>
+                                <textarea class="form-control" id="descripcion" th:field="*{descripcion}" rows="3"></textarea>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="precio" class="form-label fw-medium">Precio (S/)</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" id="precio" th:field="*{precio}"
+                                    required />
+                                <div class="invalid-feedback">Ingresa un precio válido mayor a 0</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="stock" class="form-label fw-medium">Stock</label>
+                                <input type="number" step="1" min="0" class="form-control" id="stock" th:field="*{stock}" required />
+                                <div class="invalid-feedback">Ingresa una cantidad de stock válida</div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="categoria" class="form-label fw-medium">Categoría</label>
+                                <select class="form-select" id="categoria" th:field="*{categoria}" required>
+                                    <option value="">Selecciona una categoría</option>
+                                    <option value="Alimento">Alimento</option>
+                                    <option value="Juguetes">Juguetes</option>
+                                    <option value="Higiene">Higiene</option>
+                                    <option value="Accesorios">Accesorios</option>
+                                </select>
+                                <div class="invalid-feedback">Selecciona una categoría</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="imagenUrl" class="form-label fw-medium">URL de imagen</label>
+                                <input type="text" class="form-control" id="imagenUrl" th:field="*{imagenUrl}" />
+                                <div class="form-text">
+                                    Puedes usar una ruta local del tipo <code>/images/nombre-archivo.jpg</code>
+                                    o una URL completa que empiece por <code>https://</code>.
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="lp-data-box d-inline-flex align-items-center gap-3" id="previewWrapper" style="display: none;">
+                                    <img id="previewImagen" src="" alt="Vista previa" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px;" />
+                                    <span class="small" style="color: var(--lp-body);">Vista previa de la imagen</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a th:href="@{/admin/productos}" class="lp-btn-outline">
+                                <i class="bi bi-arrow-left me-1"></i>Cancelar
+                            </a>
+                            <button type="submit" class="lp-btn-primary border-0">
+                                <i class="bi bi-check-lg me-1"></i>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+    var inputImagen = document.getElementById('imagenUrl');
+    var previewWrapper = document.getElementById('previewWrapper');
+    var previewImagen = document.getElementById('previewImagen');
+    if (inputImagen) {
+        if (inputImagen.value.trim()) {
+            previewImagen.src = inputImagen.value.trim();
+            previewWrapper.style.display = 'inline-flex';
+        }
+        inputImagen.addEventListener('input', function () {
+            var url = this.value.trim();
+            if (url) {
+                previewImagen.src = url;
+                previewWrapper.style.display = 'inline-flex';
+            } else {
+                previewWrapper.style.display = 'none';
+            }
+        });
+    }
+</script>
+</body>
+</html>

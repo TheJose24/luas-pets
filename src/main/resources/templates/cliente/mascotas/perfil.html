@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Expediente clínico - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'mascotas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Portal Cliente')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb('Mis mascotas', '/cliente/mascotas', ${expediente.nombre})}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+
+        <!-- A) CABECERA -->
+        <div class="lp-card p-4 mb-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-4">
+                <img th:src="${expediente.fotoUrl}" alt="Foto de la mascota" class="align-self-center align-self-lg-start"
+                    style="width: 96px; height: 96px; border-radius: 12px; object-fit: cover; flex-shrink: 0;" />
+
+                <div class="flex-grow-1 text-center text-lg-start">
+                    <div class="d-flex align-items-center justify-content-center justify-content-lg-start gap-2 flex-wrap">
+                        <h1 class="mb-0" style="font-size: 2rem; font-weight: 800; color: var(--lp-ink);" th:text="${expediente.nombre}">Nombre</h1>
+                        <span class="lp-badge" th:classappend="'lp-badge-' + ${expediente.estadoVariante}" th:text="${expediente.estadoTexto}">Estado</span>
+                    </div>
+                    <p class="mb-1" style="color: var(--lp-body);"
+                        th:text="${expediente.raza} + ' · ' + ${expediente.sexoTexto} + ' · ' + ${expediente.edadTexto} + ' · ' + ${expediente.pesoTexto}">
+                        Raza · Sexo · Edad · Peso</p>
+                    <p class="mb-0" style="font-size: 0.85rem; color: var(--lp-muted);"
+                        th:text="'Propietario: ' + ${expediente.propietarioNombre} + ' · ID: ' + ${expediente.codigo}">
+                        Propietario · ID</p>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-2 flex-shrink-0 w-100 w-lg-auto">
+                    <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary text-center w-100 w-sm-auto">
+                        <i class="bi bi-calendar-plus me-1"></i>Agendar cita
+                    </a>
+                    <a th:href="@{/cliente/mascotas}" class="lp-btn-outline text-center w-100 w-sm-auto">
+                        <i class="bi bi-arrow-left me-1"></i>Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- B) TARJETAS DE RESUMEN -->
+        <div class="row row-cols-2 row-cols-lg-5 g-3 mb-4">
+            <div class="col">
+                <div class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Última visita</span>
+                    <span class="lp-exp-summary-value" th:text="${expediente.ultimaVisitaTexto}">—</span>
+                    <span class="lp-exp-summary-support" th:text="${expediente.ultimaVisitaMotivo}">—</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Peso actual</span>
+                    <span class="lp-exp-summary-value" style="color: var(--lp-primary);" th:text="${expediente.pesoActualTexto}">—</span>
+                    <span class="lp-exp-summary-support"
+                        th:style="${expediente.variacionPesoVariante == 'success'} ? 'color: var(--lp-success);' :
+                                   (${expediente.variacionPesoVariante == 'warning'} ? 'color: var(--lp-warning);' : 'color: var(--lp-muted);')">
+                        <i th:class="'bi ' + ${expediente.variacionPesoIcono}"></i> <span th:text="${expediente.variacionPesoTexto}">—</span>
+                    </span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Alergias</span>
+                    <span class="lp-exp-summary-value" th:if="${expediente.tieneAlergias}" style="color: var(--lp-danger); font-size: 1rem;">
+                        <i class="bi bi-exclamation-triangle me-1"></i><span th:text="${expediente.alergiasTexto}">—</span>
+                    </span>
+                    <span class="lp-exp-summary-value" th:unless="${expediente.tieneAlergias}" style="color: var(--lp-body); font-size: 1rem;"
+                        th:text="${expediente.alergiasTexto}">—</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Última receta</span>
+                    <span class="lp-exp-clamp-2" th:text="${expediente.ultimosMedicamentos}">—</span>
+                </div>
+            </div>
+            <div class="col">
+                <a th:if="${expediente.proximaCitaId != null}" th:href="@{/cliente/citas}" class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Próxima cita</span>
+                    <span class="lp-exp-summary-value" style="color: var(--lp-primary);" th:text="${expediente.proximaCitaTexto}">—</span>
+                    <span class="lp-exp-summary-support" th:text="${expediente.proximaCitaMotivo}">—</span>
+                </a>
+                <div th:if="${expediente.proximaCitaId == null}" class="lp-exp-summary-card h-100">
+                    <span class="lp-exp-summary-label">Próxima cita</span>
+                    <span class="lp-exp-summary-value" style="color: var(--lp-primary);" th:text="${expediente.proximaCitaTexto}">—</span>
+                    <span class="lp-exp-summary-support" th:text="${expediente.proximaCitaMotivo}">—</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- C) PANEL LATERAL -->
+            <div class="col-12 col-lg-3 order-2 order-lg-1">
+                <div class="lp-card p-4 mb-4" th:if="${expediente.vetNombre != null}">
+                    <h2 class="lp-section-title" style="font-size: 1.05rem;">Veterinario tratante</h2>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 44px; height: 44px; border-radius: 50%; background-color: var(--lp-primary-soft); color: var(--lp-primary); font-weight: 700;"
+                            th:text="${expediente.vetInicial}">D</span>
+                        <div>
+                            <p class="mb-0 fw-semibold" style="color: var(--lp-ink);" th:text="${expediente.vetNombre}">Doctor</p>
+                            <p class="mb-0" style="font-size: 0.8rem; color: var(--lp-muted);" th:text="${expediente.vetEmail}">Email</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lp-card p-4">
+                    <h2 class="lp-section-title" style="font-size: 1.05rem;" th:text="'Citas de ' + ${expediente.nombre}">Citas</h2>
+
+                    <div th:if="${#lists.isEmpty(citas)}" class="lp-empty-state py-4">
+                        <i class="bi bi-calendar-x"></i>
+                        <p class="mb-3">Aún no tiene citas registradas.</p>
+                        <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary">Agendar cita</a>
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(citas)}" class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between align-items-center gap-2" th:each="cita : ${citas}">
+                            <div>
+                                <p class="mb-0 fw-semibold" style="color: var(--lp-ink);"
+                                    th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</p>
+                                <p class="mb-0 small" style="color: var(--lp-body);"
+                                    th:text="'Dr. ' + ${cita.doctor.nombre} + ' ' + ${cita.doctor.apellido}">Doctor</p>
+                            </div>
+                            <span class="lp-badge flex-shrink-0"
+                                th:classappend="${cita.estado.name() == 'PENDIENTE'} ? 'lp-badge-warning' :
+                                                 (${cita.estado.name() == 'CONFIRMADA'} ? 'lp-badge-info' :
+                                                 (${cita.estado.name() == 'ATENDIDA'} ? 'lp-badge-success' : 'lp-badge-secondary'))"
+                                th:text="${cita.estado}">Estado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- D) COLUMNA PRINCIPAL -->
+            <div class="col-12 col-lg-9 order-1 order-lg-2">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="lp-section-title mb-0">Historial clínico</h2>
+                    <span class="lp-chip" th:text="${expediente.totalConsultas} + ' consultas registradas'">0 consultas registradas</span>
+                </div>
+
+                <div th:if="${!#lists.isEmpty(consultas)}" class="lp-card p-3 mb-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-8">
+                            <div class="lp-search">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="buscarHistorial" placeholder="Buscar en el historial..." autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <select class="form-select" id="ordenHistorial">
+                                <option value="recientes">Más recientes</option>
+                                <option value="antiguas">Más antiguas</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(consultas)}" class="lp-card lp-empty-state">
+                    <i class="bi bi-file-medical"></i>
+                    <h5 class="fw-bold mb-1" th:text="'Aún no hay consultas registradas para ' + ${expediente.nombre} + '.'">Sin consultas</h5>
+                </div>
+
+                <div id="sinResultadosHistorial" class="lp-card lp-empty-state" style="display: none;">
+                    <i class="bi bi-search"></i>
+                    <p class="mb-0">No se encontraron consultas con ese término de búsqueda.</p>
+                </div>
+
+                <div class="accordion" id="accordionHistorial" th:if="${!#lists.isEmpty(consultas)}">
+                    <div class="accordion-item" th:each="consulta : ${consultas}">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button d-flex align-items-center gap-3" type="button" data-bs-toggle="collapse"
+                                th:classappend="${consulta.esReciente} ? '' : 'collapsed'"
+                                th:attr="data-bs-target=|#colapso${consulta.id}|, aria-expanded=${consulta.esReciente}, aria-controls=|colapso${consulta.id}|">
+                                <span class="lp-exp-month-circle" th:classappend="${consulta.esReciente} ? 'lp-exp-reciente' : ''"
+                                    th:text="${consulta.mesAbreviado}">OCT</span>
+                                <span class="flex-grow-1 text-start" style="min-width: 0;">
+                                    <span class="d-block text-truncate" style="font-size: 1.05rem; font-weight: 600; color: var(--lp-ink);" th:text="${consulta.titulo}">Título</span>
+                                    <span class="d-block text-truncate" style="font-size: 0.8rem; color: var(--lp-muted);">
+                                        <span th:text="${consulta.fechaTexto} + ' · ' + ${consulta.doctorNombre}">Fecha · Doctor</span>
+                                        <span th:if="${consulta.pesoTexto != null}" th:text="' · ' + ${consulta.pesoTexto}"></span>
+                                    </span>
+                                </span>
+                            </button>
+                        </h2>
+                        <div th:id="|colapso${consulta.id}|" class="accordion-collapse collapse" th:classappend="${consulta.esReciente} ? 'show' : ''"
+                            data-bs-parent="#accordionHistorial">
+                            <div class="accordion-body">
+                                <div class="row g-4">
+                                    <div class="col-12 col-md-6">
+                                        <span class="lp-exp-block-label">Síntomas / Motivo</span>
+                                        <p class="mb-0" style="color: var(--lp-body);" th:text="${consulta.titulo}">Motivo</p>
+                                    </div>
+                                    <div class="col-12 col-md-6" th:if="${consulta.diagnostico != null and !#strings.isEmpty(consulta.diagnostico)}">
+                                        <span class="lp-exp-block-label">Diagnóstico</span>
+                                        <p class="mb-0" style="color: var(--lp-body);" th:text="${consulta.diagnostico}">Diagnóstico</p>
+                                    </div>
+                                    <div class="col-12" th:if="${consulta.tratamiento != null and !#strings.isEmpty(consulta.tratamiento)}">
+                                        <span class="lp-exp-block-label">Tratamiento</span>
+                                        <p class="mb-0" style="color: var(--lp-body);" th:text="${consulta.tratamiento}">Tratamiento</p>
+                                    </div>
+                                    <div class="col-12" th:if="${!#lists.isEmpty(consulta.medicamentosLineas)}">
+                                        <span class="lp-exp-block-label">Medicamentos recetados</span>
+                                        <div class="lp-exp-med-list">
+                                            <div class="lp-exp-med-item" th:each="linea : ${consulta.medicamentosLineas}" th:text="${linea}">Medicamento</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12" th:if="${consulta.observaciones != null and !#strings.isEmpty(consulta.observaciones)}">
+                                        <span class="lp-exp-block-label">Observaciones e indicaciones</span>
+                                        <p class="mb-0" style="color: var(--lp-body);" th:text="${consulta.observaciones}">Observaciones</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    (function () {
+        var contenedor = document.getElementById('accordionHistorial');
+        if (!contenedor) return;
+        var itemsOriginales = Array.prototype.slice.call(contenedor.children);
+
+        var buscarInput = document.getElementById('buscarHistorial');
+        var sinResultados = document.getElementById('sinResultadosHistorial');
+        if (buscarInput) {
+            buscarInput.addEventListener('input', function () {
+                var termino = this.value.trim().toLowerCase();
+                var visibles = 0;
+                itemsOriginales.forEach(function (item) {
+                    var coincide = item.textContent.toLowerCase().indexOf(termino) !== -1;
+                    item.style.display = coincide ? '' : 'none';
+                    if (coincide) visibles++;
+                });
+                if (sinResultados) sinResultados.style.display = visibles === 0 ? 'flex' : 'none';
+            });
+        }
+
+        var ordenSelect = document.getElementById('ordenHistorial');
+        if (ordenSelect) {
+            ordenSelect.addEventListener('change', function () {
+                var items = this.value === 'antiguas' ? itemsOriginales.slice().reverse() : itemsOriginales;
+                items.forEach(function (item) { contenedor.appendChild(item); });
+            });
+        }
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Panel de Administración - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('admin', 'dashboard')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Panel Administrativo')}"></div>
+
+    <div class="container-fluid p-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--lp-ink); line-height: 1.2;">
+                    <span th:text="${saludo}">¡Buenos días</span>, <span th:text="${usuario.nombre}">Admin</span>!
+                </h1>
+                <p class="mb-0" style="color: var(--lp-body);">Aquí tienes un resumen de lo que está sucediendo en Luas Pets.</p>
+            </div>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <a th:href="@{/admin/doctores/nuevo}" class="lp-btn-primary text-center w-100 w-sm-auto">
+                    <i class="bi bi-plus-lg me-1"></i>Nuevo doctor
+                </a>
+                <a th:href="@{/admin/productos/nuevo}" class="lp-btn-outline text-center w-100 w-sm-auto">
+                    <i class="bi bi-box-seam me-1"></i>Nuevo producto
+                </a>
+            </div>
+        </div>
+
+        <div class="row row-cols-2 row-cols-lg-5 g-3 mb-4">
+            <div class="col">
+                <div class="lp-metric-card lp-metric-primary h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; color: var(--lp-body);">Total usuarios</span>
+                        <span class="lp-metric-icon" style="border-radius: 50%;"><i class="bi bi-people-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalUsuarios}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-info h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; color: var(--lp-body);">Clientes</span>
+                        <span class="lp-metric-icon" style="border-radius: 50%;"><i class="bi bi-person-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalClientes}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-primary h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; color: var(--lp-body);">Veterinarios</span>
+                        <span class="lp-metric-icon" style="border-radius: 50%;"><i class="bi bi-clipboard-pulse-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalDoctores}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-warning h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; color: var(--lp-body);">Mascotas</span>
+                        <span class="lp-metric-icon" style="border-radius: 50%;"><i class="bi bi-heart-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${totalMascotas}">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="lp-metric-card lp-metric-neutral h-100">
+                    <div class="lp-metric-card-top">
+                        <span class="text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; color: var(--lp-body);">Citas del mes</span>
+                        <span class="lp-metric-icon" style="border-radius: 50%;"><i class="bi bi-calendar-event-fill"></i></span>
+                    </div>
+                    <div class="lp-metric-value" th:text="${citasDelMes}">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+            <h2 class="lp-section-title mb-0">Alertas del sistema</h2>
+            <span style="color: var(--lp-body);" th:text="${totalAlertas} + ' requieren atención'">0 requieren atención</span>
+        </div>
+
+        <div th:if="${totalAlertas == 0}" class="lp-card lp-empty-state mb-4">
+            <i class="bi bi-check-circle" style="color: var(--lp-success);"></i>
+            <p class="mb-0 fw-semibold">Todo en orden. No hay alertas pendientes.</p>
+        </div>
+
+        <div th:if="${totalAlertas > 0}" class="row row-cols-1 row-cols-lg-3 g-3 mb-4">
+            <div class="col" th:if="${!#lists.isEmpty(productosStockBajo)}">
+                <div class="lp-card p-4 h-100 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #fef3c7; color: var(--lp-warning);">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </span>
+                        <h3 class="mb-0" style="font-size: 1.05rem; font-weight: 700; color: var(--lp-ink);">Stock bajo</h3>
+                    </div>
+                    <div class="d-flex flex-column gap-2 flex-grow-1">
+                        <div th:each="producto : ${productosStockBajo}">
+                            <p class="mb-0 fw-medium" style="color: var(--lp-ink);" th:text="${producto.nombre}">Producto</p>
+                            <p class="mb-0 small" style="color: var(--lp-body);" th:text="'Quedan ' + ${producto.stock} + ' unidades'">Stock</p>
+                        </div>
+                    </div>
+                    <a th:href="@{/admin/productos}" class="lp-btn-soft mt-3 text-center">Gestionar productos</a>
+                </div>
+            </div>
+            <div class="col" th:if="${!#lists.isEmpty(citasVencidas)}">
+                <div class="lp-card p-4 h-100 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #fee2e2; color: var(--lp-danger);">
+                            <i class="bi bi-calendar-x"></i>
+                        </span>
+                        <h3 class="mb-0" style="font-size: 1.05rem; font-weight: 700; color: var(--lp-ink);">Citas sin atender</h3>
+                    </div>
+                    <div class="d-flex flex-column gap-2 flex-grow-1">
+                        <div th:each="cita : ${citasVencidas}">
+                            <p class="mb-0 fw-medium" style="color: var(--lp-ink);"
+                                th:text="${cita.mascota.nombre} + ' · Dr. ' + ${cita.doctor.nombre}">Mascota · Doctor</p>
+                            <p class="mb-0 small" style="color: var(--lp-body);"
+                                th:text="${#temporals.format(cita.fechaHora, 'dd/MM/yyyy HH:mm')}">Fecha</p>
+                        </div>
+                    </div>
+                    <a th:href="@{/admin/citas}" class="lp-btn-soft mt-3 text-center">Ver todas las citas</a>
+                </div>
+            </div>
+            <div class="col" th:if="${!#lists.isEmpty(pedidosPendientesLista)}">
+                <div class="lp-card p-4 h-100 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 40px; height: 40px; border-radius: 50%; background-color: #dbeafe; color: var(--lp-info);">
+                            <i class="bi bi-bag"></i>
+                        </span>
+                        <h3 class="mb-0" style="font-size: 1.05rem; font-weight: 700; color: var(--lp-ink);">Pedidos por gestionar</h3>
+                    </div>
+                    <div class="d-flex flex-column gap-2 flex-grow-1">
+                        <div th:each="pedido : ${pedidosPendientesLista}">
+                            <p class="mb-0 fw-medium" style="color: var(--lp-ink);"
+                                th:text="'Pedido #' + ${pedido.id} + ' · ' + ${pedido.cliente.nombre}">Pedido</p>
+                            <p class="mb-0 small" style="color: var(--lp-body);"
+                                th:text="'S/ ' + ${#numbers.formatDecimal(pedido.total, 1, 2)}">Total</p>
+                        </div>
+                    </div>
+                    <a th:href="@{/admin/pedidos}" class="lp-btn-soft mt-3 text-center">Ver pedidos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="lp-section-title mb-0">Citas de hoy</h2>
+                        <span class="lp-badge lp-badge-secondary" th:text="${citasHoyTotal} + ' en total'">0 en total</span>
+                    </div>
+                    <p class="small mb-3" style="color: var(--lp-body);">Distribución de las citas programadas para hoy.</p>
+
+                    <div th:if="${citasHoyTotal == 0}" class="lp-empty-state py-3">
+                        <i class="bi bi-calendar-x"></i>
+                        <p class="mb-0">No hay citas programadas para hoy.</p>
+                    </div>
+
+                    <div th:unless="${citasHoyTotal == 0}" class="d-flex flex-column gap-3">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="d-flex align-items-center gap-2">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: var(--lp-success); display: inline-block;"></span>
+                                    <span class="small" style="color: var(--lp-ink);">Atendidas</span>
+                                </span>
+                                <span class="small fw-semibold" style="color: var(--lp-ink);"
+                                    th:text="${citasHoyAtendidas} + ' (' + ${pctHoyAtendidas} + '%)'">0 (0%)</span>
+                            </div>
+                            <div class="lp-progress-track">
+                                <div class="lp-progress-fill"
+                                    th:style="'background-color: var(--lp-success); width: ' + ${pctHoyAtendidas} + '%;'"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="d-flex align-items-center gap-2">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: var(--lp-info); display: inline-block;"></span>
+                                    <span class="small" style="color: var(--lp-ink);">Confirmadas</span>
+                                </span>
+                                <span class="small fw-semibold" style="color: var(--lp-ink);"
+                                    th:text="${citasHoyConfirmadas} + ' (' + ${pctHoyConfirmadas} + '%)'">0 (0%)</span>
+                            </div>
+                            <div class="lp-progress-track">
+                                <div class="lp-progress-fill"
+                                    th:style="'background-color: var(--lp-info); width: ' + ${pctHoyConfirmadas} + '%;'"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="d-flex align-items-center gap-2">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: var(--lp-warning); display: inline-block;"></span>
+                                    <span class="small" style="color: var(--lp-ink);">Pendientes</span>
+                                </span>
+                                <span class="small fw-semibold" style="color: var(--lp-ink);"
+                                    th:text="${citasHoyPendientes} + ' (' + ${pctHoyPendientes} + '%)'">0 (0%)</span>
+                            </div>
+                            <div class="lp-progress-track">
+                                <div class="lp-progress-fill"
+                                    th:style="'background-color: var(--lp-warning); width: ' + ${pctHoyPendientes} + '%;'"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="d-flex align-items-center gap-2">
+                                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: var(--lp-danger); display: inline-block;"></span>
+                                    <span class="small" style="color: var(--lp-ink);">Canceladas</span>
+                                </span>
+                                <span class="small fw-semibold" style="color: var(--lp-ink);"
+                                    th:text="${citasHoyCanceladas} + ' (' + ${pctHoyCanceladas} + '%)'">0 (0%)</span>
+                            </div>
+                            <div class="lp-progress-track">
+                                <div class="lp-progress-fill"
+                                    th:style="'background-color: var(--lp-danger); width: ' + ${pctHoyCanceladas} + '%;'"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a th:href="@{/admin/citas}" class="d-flex align-items-center gap-1 mt-3 text-decoration-none fw-medium"
+                        style="color: var(--lp-primary);">
+                        Gestionar agenda completa<i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-8">
+                <div class="lp-card p-4 h-100">
+                    <h2 class="lp-section-title mb-0">Evolución de citas</h2>
+                    <p class="small mb-3" style="color: var(--lp-body);">Últimos 6 meses</p>
+                    <div style="height: 260px;">
+                        <canvas id="chartEvolucion"></canvas>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3 mt-3">
+                        <span class="d-flex align-items-center gap-2 small" style="color: var(--lp-body);">
+                            <span style="width: 10px; height: 10px; border-radius: 3px; background-color: var(--lp-primary-soft); display: inline-block;"></span>
+                            Citas totales
+                        </span>
+                        <span class="d-flex align-items-center gap-2 small" style="color: var(--lp-body);">
+                            <span style="width: 10px; height: 10px; border-radius: 3px; background-color: var(--lp-primary); display: inline-block;"></span>
+                            Citas atendidas
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-lg-8">
+                <div class="lp-card p-4">
+                    <h2 class="lp-section-title mb-3">Actividad reciente</h2>
+
+                    <div th:if="${#lists.isEmpty(actividadReciente)}" class="lp-empty-state py-3">
+                        <i class="bi bi-clock-history"></i>
+                        <p class="mb-0">Aún no hay actividad registrada.</p>
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(actividadReciente)}">
+                        <div class="d-flex align-items-start gap-3 py-3" style="border-bottom: 1px solid var(--lp-border);"
+                            th:each="item : ${actividadReciente}">
+                            <span class="lp-act-icon"
+                                th:style="${item.colorVariante == 'primary'} ? 'background-color: var(--lp-primary-soft); color: var(--lp-primary);' :
+                                           (${item.colorVariante == 'info'} ? 'background-color: #dbeafe; color: var(--lp-info);' :
+                                           (${item.colorVariante == 'warning'} ? 'background-color: #fef3c7; color: var(--lp-warning);' :
+                                           'background-color: #fee2e2; color: var(--lp-danger);'))">
+                                <i th:class="'bi ' + ${item.icono}"></i>
+                            </span>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <p class="mb-0 fw-medium" style="color: var(--lp-ink);" th:text="${item.descripcion}">Descripción</p>
+                                <p class="mb-0 small" style="color: var(--lp-muted);" th:text="${item.detalle}">Detalle</p>
+                            </div>
+                            <span class="lp-badge lp-badge-secondary flex-shrink-0" th:text="${item.etiqueta}">Etiqueta</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4">
+                    <h2 class="lp-section-title mb-3">Acciones rápidas</h2>
+                    <div class="d-flex flex-column gap-2 mb-4">
+                        <a th:href="@{/admin/doctores/nuevo}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-person-plus"></i></span>
+                                <span class="lp-quick-action-label">Registrar doctor</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                        <a th:href="@{/admin/productos/nuevo}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-box-seam"></i></span>
+                                <span class="lp-quick-action-label">Agregar producto</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                        <a th:href="@{/admin/citas}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-calendar3"></i></span>
+                                <span class="lp-quick-action-label">Gestionar citas</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                        <a th:href="@{/admin/pedidos}" class="lp-quick-action justify-content-between">
+                            <span class="d-flex align-items-center gap-3">
+                                <span class="lp-quick-action-icon"><i class="bi bi-bag"></i></span>
+                                <span class="lp-quick-action-label">Ver pedidos</span>
+                            </span>
+                            <i class="bi bi-chevron-right" style="color: var(--lp-muted);"></i>
+                        </a>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--lp-border); padding-top: 1rem;">
+                        <h6 class="text-uppercase small fw-semibold mb-3" style="color: var(--lp-muted);">Distribución de roles</h6>
+                        <div class="d-flex" style="height: 8px; border-radius: 999px; overflow: hidden; background-color: var(--lp-bg);">
+                            <div th:style="'background-color: var(--lp-primary); width: ' + ${pctClientes} + '%;'"></div>
+                            <div th:style="'background-color: var(--lp-info); width: ' + ${pctDoctores} + '%;'"></div>
+                            <div th:style="'background-color: var(--lp-warning); width: ' + ${pctAdmins} + '%;'"></div>
+                        </div>
+                        <div class="d-flex flex-column gap-2 mt-3">
+                            <span class="d-flex align-items-center gap-2 small" style="color: var(--lp-body);">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--lp-primary); display: inline-block;"></span>
+                                <span th:text="'Clientes (' + ${pctClientes} + '%)'">Clientes</span>
+                            </span>
+                            <span class="d-flex align-items-center gap-2 small" style="color: var(--lp-body);">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--lp-info); display: inline-block;"></span>
+                                <span th:text="'Veterinarios (' + ${pctDoctores} + '%)'">Veterinarios</span>
+                            </span>
+                            <span class="d-flex align-items-center gap-2 small" style="color: var(--lp-body);">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--lp-warning); display: inline-block;"></span>
+                                <span th:text="'Admins (' + ${pctAdmins} + '%)'">Admins</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    var chartLabelsRaw = /*[[${chartLabels}]]*/ '[]';
+    var chartTotalesRaw = /*[[${chartCitasTotales}]]*/ '[]';
+    var chartAtendidasRaw = /*[[${chartCitasAtendidas}]]*/ '[]';
+    /*]]>*/
+
+    (function () {
+        var labels = JSON.parse(chartLabelsRaw);
+        var totales = JSON.parse(chartTotalesRaw);
+        var atendidas = JSON.parse(chartAtendidasRaw);
+
+        var canvas = document.getElementById('chartEvolucion');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        var estilos = getComputedStyle(document.documentElement);
+        var colorSoft = estilos.getPropertyValue('--lp-primary-soft').trim() || '#ccfbf1';
+        var colorPrimary = estilos.getPropertyValue('--lp-primary').trim() || '#0f766e';
+
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Citas totales',
+                        data: totales,
+                        backgroundColor: colorSoft,
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Citas atendidas',
+                        data: atendidas,
+                        backgroundColor: colorPrimary,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom' },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+target/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+*.log
+src/main/resources/application-local.properties
+INFORME-AUDITORIA.md
+INFORME-AUDITORIA-2.md
+README.md

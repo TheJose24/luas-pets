@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mis mascotas - Luas Pets</title>
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: sidebar('cliente', 'mascotas')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Mis mascotas')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Mis mascotas')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="lp-page-title">Mis mascotas</h1>
+                <p class="lp-page-subtitle">Gestiona la información de tus mascotas registradas.</p>
+            </div>
+            <a th:href="@{/cliente/mascotas/nueva}" class="lp-btn-primary w-100 w-md-auto text-center flex-shrink-0">
+                <i class="bi bi-plus-lg me-1"></i>Registrar nueva mascota
+            </a>
+        </div>
+
+        <div class="lp-alert lp-alert-success" th:if="${param.exito}">
+            <i class="bi bi-check-circle"></i> Mascota registrada correctamente
+        </div>
+
+        <div th:if="${#lists.isEmpty(mascotas)}" class="lp-card lp-empty-state">
+            <i class="bi bi-heart"></i>
+            <h5 class="fw-bold mb-1">Aún no tienes mascotas registradas</h5>
+            <p class="mb-3">Registra a tu primera mascota para empezar a agendar citas.</p>
+            <a th:href="@{/cliente/mascotas/nueva}" class="lp-btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Registrar mascota
+            </a>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(mascotas)}">
+            <div class="lp-search mb-4">
+                <i class="bi bi-search"></i>
+                <input type="text" id="buscarMascota" placeholder="Buscar por nombre..." autocomplete="off" />
+            </div>
+
+            <div id="gridMascotas" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col" th:each="mascota : ${mascotas}"
+                    th:with="foto=${mascota.fotoUrl != null and !#strings.isEmpty(mascota.fotoUrl)} ? ${mascota.fotoUrl} : (${mascota.especie == 'Perro'} ? @{/images/default-perro.jpg} : (${mascota.especie == 'Gato'} ? @{/images/default-gato.jpg} : @{/images/default-otro.jpg}))">
+                    <div class="lp-pet-card lp-card-hover h-100" th:attr="data-nombre=${#strings.toLowerCase(mascota.nombre)}">
+                        <img th:src="${foto}" alt="Foto de la mascota" />
+                        <div class="lp-pet-body">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <p class="lp-pet-name mb-0" th:text="${mascota.nombre}">Nombre</p>
+                                <span class="lp-badge flex-shrink-0"
+                                    th:classappend="${mascota.estado == null or mascota.estado.name() == 'ACTIVO'} ? 'lp-badge-success' :
+                                                     (${mascota.estado.name() == 'EN_TRATAMIENTO'} ? 'lp-badge-warning' : 'lp-badge-secondary')"
+                                    th:text="${mascota.estado == null or mascota.estado.name() == 'ACTIVO'} ? 'Activo' :
+                                              (${mascota.estado.name() == 'EN_TRATAMIENTO'} ? 'En tratamiento' : 'Inactivo')">Estado</span>
+                            </div>
+                            <p class="lp-pet-meta" th:text="${mascota.raza} + ' · ' + ${mascota.especie}">Raza · Especie</p>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="lp-data-box">
+                                        <span class="lp-data-label">Edad</span>
+                                        <span class="lp-data-value lp-edad-calc" th:attr="data-nacimiento=${mascota.fechaNacimiento}">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="lp-data-box">
+                                        <span class="lp-data-label">Peso</span>
+                                        <span class="lp-data-value" th:text="${mascota.peso != null} ? ${mascota.peso} + ' kg' : '-'">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a th:href="@{/cliente/mascotas/{id}(id=${mascota.id})}" class="lp-btn-outline w-100 text-center">
+                                Ver perfil<i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="sinResultadosMascotas" class="lp-empty-state" style="display: none;">
+                <i class="bi bi-search"></i>
+                <p class="mb-0">No se encontraron mascotas con ese nombre.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+    document.querySelectorAll('.lp-edad-calc').forEach(function (el) {
+        var fecha = el.getAttribute('data-nacimiento');
+        if (!fecha) { el.textContent = '-'; return; }
+        var nacimiento = new Date(fecha);
+        var hoy = new Date();
+        var edad = hoy.getFullYear() - nacimiento.getFullYear();
+        var m = hoy.getMonth() - nacimiento.getMonth();
+        if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+        el.textContent = edad >= 0 ? edad + (edad === 1 ? ' año' : ' años') : '-';
+    });
+
+    var inputBuscar = document.getElementById('buscarMascota');
+    if (inputBuscar) {
+        inputBuscar.addEventListener('input', function () {
+            var termino = this.value.trim().toLowerCase();
+            var cols = document.querySelectorAll('#gridMascotas > .col');
+            var visibles = 0;
+            cols.forEach(function (col) {
+                var nombre = col.querySelector('.lp-pet-card').getAttribute('data-nombre') || '';
+                var coincide = nombre.indexOf(termino) !== -1;
+                col.style.display = coincide ? '' : 'none';
+                if (coincide) visibles++;
+            });
+            document.getElementById('sinResultadosMascotas').style.display = visibles === 0 ? 'flex' : 'none';
+        });
+    }
+</script>
+</body>
+</html>
