@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+    <title>Mi perfil - Luas Pets</title>
+</head>
+<body>
+
+<!-- rolActual llega en minusculas desde PerfilController; 'perfil' como seccion
+     no coincide con ningun link del sidebar, asi que ninguno queda resaltado
+     (mismo patron que templates/notificaciones/lista.html). -->
+<div th:replace="~{fragments/layout :: sidebar(${rolActual}, 'perfil')}"></div>
+
+<div class="lp-main">
+    <div th:replace="~{fragments/layout :: topbar('Mi perfil')}"></div>
+    <div th:replace="~{fragments/layout :: breadcrumb(null, null, 'Mi perfil')}"></div>
+
+    <div class="container-fluid p-4 pt-2">
+        <div class="row g-4">
+            <!-- COLUMNA IZQUIERDA: identidad -->
+            <div class="col-12 col-lg-4">
+                <div class="lp-card p-4 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center mx-auto mb-3"
+                        style="width: 96px; height: 96px; border-radius: 50%; background-color: var(--lp-primary-soft); color: var(--lp-primary); font-size: 2.25rem; font-weight: 700;">
+                        <span th:text="${#strings.substring(usuario.nombre, 0, 1)}">U</span>
+                    </div>
+                    <p class="mb-1" style="font-size: 1.25rem; font-weight: 700; color: var(--lp-ink);"
+                        th:text="${usuario.nombre} + ' ' + ${usuario.apellido}">Nombre Apellido</p>
+                    <p class="mb-2" style="font-size: 0.85rem; color: var(--lp-muted);" th:text="${usuario.email}">correo@ejemplo.com</p>
+                    <span class="lp-badge"
+                        th:classappend="${rolActual == 'admin'} ? 'lp-badge-primary' : (${rolActual == 'doctor'} ? 'lp-badge-info' : 'lp-badge-success')"
+                        th:text="${rolTexto}">Rol</span>
+
+                    <div class="mt-4 pt-3 text-start" style="border-top: 1px solid var(--lp-border);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small" style="color: var(--lp-muted);">Miembro desde</span>
+                            <span class="small fw-medium" style="color: var(--lp-ink);" th:text="${fechaRegistroTexto}">1 de enero de 2026</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small" style="color: var(--lp-muted);">Estado de la cuenta</span>
+                            <span class="lp-badge lp-badge-success">Activa</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA: formularios -->
+            <div class="col-12 col-lg-8">
+                <div class="lp-card p-4 p-md-5 mb-4">
+                    <h2 class="lp-section-title mb-3">Datos personales</h2>
+
+                    <div class="lp-alert lp-alert-success" th:if="${exito}">
+                        <i class="bi bi-check-circle"></i> <span th:text="${exito}"></span>
+                    </div>
+                    <div class="lp-alert lp-alert-danger" th:if="${error}">
+                        <i class="bi bi-exclamation-triangle"></i> <span th:text="${error}"></span>
+                    </div>
+
+                    <form th:action="@{/perfil/datos}" method="post" class="needs-validation" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="nombre" class="form-label fw-medium">Nombres</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre"
+                                    th:value="${usuario.nombre}" required />
+                                <div class="invalid-feedback">Ingresa tu nombre</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="apellido" class="form-label fw-medium">Apellidos</label>
+                                <input type="text" class="form-control" id="apellido" name="apellido"
+                                    th:value="${usuario.apellido}" required />
+                                <div class="invalid-feedback">Ingresa tu apellido</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="email" class="form-label fw-medium">Correo electrónico</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" id="email" th:value="${usuario.email}" disabled />
+                                </div>
+                                <div class="form-text">El correo no se puede modificar porque es tu identificador de acceso.</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="telefono" class="form-label fw-medium">Teléfono</label>
+                                <input type="text" class="form-control" id="telefono" name="telefono"
+                                    th:value="${usuario.telefono}" pattern="[0-9]{9}" />
+                                <div class="form-text">9 dígitos, sin espacios ni guiones</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="lp-btn-primary border-0">
+                                <i class="bi bi-check-lg me-1"></i>Guardar cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="lp-card p-4 p-md-5">
+                    <h2 class="lp-section-title mb-3">Cambiar contraseña</h2>
+
+                    <div class="lp-alert lp-alert-success" th:if="${exitoPassword}">
+                        <i class="bi bi-check-circle"></i> <span th:text="${exitoPassword}"></span>
+                    </div>
+                    <div class="lp-alert lp-alert-danger" th:if="${errorPassword}">
+                        <i class="bi bi-exclamation-triangle"></i> <span th:text="${errorPassword}"></span>
+                    </div>
+
+                    <form th:action="@{/perfil/password}" method="post" class="needs-validation" novalidate id="formPassword">
+                        <div class="mb-3">
+                            <label for="passwordActual" class="form-label fw-medium">Contraseña actual</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="passwordActual" name="passwordActual" required />
+                                <button type="button" class="btn input-group-text" id="toggleActual" style="cursor: pointer;">
+                                    <i class="bi bi-eye" id="toggleActualIcon"></i>
+                                </button>
+                                <div class="invalid-feedback">Ingresa tu contraseña actual</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="passwordNueva" class="form-label fw-medium">Nueva contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="passwordNueva" name="passwordNueva" minlength="8" required />
+                                <button type="button" class="btn input-group-text" id="toggleNueva" style="cursor: pointer;">
+                                    <i class="bi bi-eye" id="toggleNuevaIcon"></i>
+                                </button>
+                                <div class="invalid-feedback">Debe tener al menos 8 caracteres</div>
+                            </div>
+                            <div class="form-text">Debe contener al menos 8 caracteres.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="passwordConfirmacion" class="form-label fw-medium">Confirmar nueva contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+                                <input type="password" class="form-control" id="passwordConfirmacion" name="passwordConfirmacion" required />
+                                <button type="button" class="btn input-group-text" id="toggleConfirmacion" style="cursor: pointer;">
+                                    <i class="bi bi-eye" id="toggleConfirmacionIcon"></i>
+                                </button>
+                                <div class="invalid-feedback" id="passwordConfirmacionFeedback">Las contraseñas no coinciden</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="lp-btn-primary border-0">
+                                <i class="bi bi-shield-lock me-1"></i>Actualizar contraseña
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    (function () {
+        function attachToggle(buttonId, inputId, iconId) {
+            var toggle = document.getElementById(buttonId);
+            var input = document.getElementById(inputId);
+            var icon = document.getElementById(iconId);
+            if (toggle && input && icon) {
+                toggle.addEventListener('click', function () {
+                    var showing = input.getAttribute('type') === 'text';
+                    input.setAttribute('type', showing ? 'password' : 'text');
+                    icon.classList.toggle('bi-eye', showing);
+                    icon.classList.toggle('bi-eye-slash', !showing);
+                });
+            }
+        }
+        attachToggle('toggleActual', 'passwordActual', 'toggleActualIcon');
+        attachToggle('toggleNueva', 'passwordNueva', 'toggleNuevaIcon');
+        attachToggle('toggleConfirmacion', 'passwordConfirmacion', 'toggleConfirmacionIcon');
+    })();
+
+    (function () {
+        var form = document.getElementById('formPassword');
+        var passwordNueva = document.getElementById('passwordNueva');
+        var passwordConfirmacion = document.getElementById('passwordConfirmacion');
+        if (!form || !passwordNueva || !passwordConfirmacion) return;
+
+        function coinciden() {
+            return passwordNueva.value === passwordConfirmacion.value;
+        }
+
+        function validarEnTiempoReal() {
+            if (passwordNueva.value && passwordConfirmacion.value) {
+                if (coinciden()) {
+                    passwordConfirmacion.classList.remove('is-invalid');
+                    passwordConfirmacion.classList.add('is-valid');
+                } else {
+                    passwordConfirmacion.classList.remove('is-valid');
+                    passwordConfirmacion.classList.add('is-invalid');
+                }
+            } else {
+                passwordConfirmacion.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+
+        passwordNueva.addEventListener('input', validarEnTiempoReal);
+        passwordConfirmacion.addEventListener('input', validarEnTiempoReal);
+
+        form.addEventListener('submit', function (event) {
+            if (!coinciden()) {
+                event.preventDefault();
+                event.stopPropagation();
+                passwordConfirmacion.classList.remove('is-valid');
+                passwordConfirmacion.classList.add('is-invalid');
+            }
+        });
+    })();
+</script>
+</body>
+</html>

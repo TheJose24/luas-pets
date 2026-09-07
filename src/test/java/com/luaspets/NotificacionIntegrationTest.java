@@ -112,13 +112,22 @@ class NotificacionIntegrationTest {
         return usuarioRepository.findByEmail("doctor@luaspets.com").orElseThrow();
     }
 
+    // Hora fija (14:00) y 2 dias de adelanto para quedar siempre dentro del
+    // horario de atencion (08:00-20:00) y muy por encima del minimo de 24
+    // horas de anticipacion, sin importar a que hora corra la suite. Se usa
+    // 14:00 y no 10:00 para no chocar con la cita que DataSeeder siembra para
+    // doctor@luaspets.com en dia+3 a las 10:00.
+    private String fechaFuturaTexto() {
+        return LocalDateTime.now().plusDays(2).withHour(14).withMinute(0).withSecond(0).withNano(0).format(FORMAT);
+    }
+
     @Test
     void agendarCitaGeneraNotificacionParaElDoctor() throws Exception {
         MockHttpSession sesionCliente = registrarYLoguearCliente("notif.agendar@test.com");
         Usuario cliente = usuarioRepository.findByEmail("notif.agendar@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto();
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -143,7 +152,7 @@ class NotificacionIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("notif.confirmar@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto();
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())

@@ -43,6 +43,7 @@ import com.luaspets.service.NotificacionService;
         MascotaController.class,
         NotificacionController.class,
         PedidoController.class,
+        PerfilController.class,
         TiendaController.class
 })
 public class GlobalModelAdvice {

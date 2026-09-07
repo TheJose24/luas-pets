@@ -37,7 +37,8 @@
 
         <div th:if="${#lists.isEmpty(pedidos)}" class="lp-card lp-empty-state">
             <i class="bi bi-bag-x"></i>
-            <h5 class="fw-bold mb-1">No hay pedidos registrados para este filtro</h5>
+            <h5 class="fw-bold mb-1" th:if="${estadoFiltro != null}">No hay pedidos con ese estado.</h5>
+            <h5 class="fw-bold mb-1" th:if="${estadoFiltro == null}">No hay pedidos registrados todavía.</h5>
         </div>
 
         <div class="lp-card p-0" th:unless="${#lists.isEmpty(pedidos)}">
@@ -59,7 +60,7 @@
                             <td th:text="${pedido.id}">1</td>
                             <td class="fw-semibold" th:text="${pedido.cliente.nombre} + ' ' + ${pedido.cliente.apellido}">Cliente</td>
                             <td th:text="${#temporals.format(pedido.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</td>
-                            <td th:text="${#lists.size(pedido.detalles)}">0</td>
+                            <td th:text="${cantidadPorPedido.get(pedido.id)} ?: 0">0</td>
                             <td th:text="'S/ ' + ${#numbers.formatDecimal(pedido.total, 1, 2)}">S/ 0.00</td>
                             <td>
                                 <span class="lp-badge"
@@ -77,6 +78,8 @@
                     </tbody>
                 </table>
             </div>
+
+            <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/admin/pedidos', ${queryFiltros}, ${desde}, ${hasta})}"></div>
         </div>
     </div>
 </div>

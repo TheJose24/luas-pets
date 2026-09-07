@@ -54,11 +54,6 @@ public class UsuarioService {
         return guardado;
     }
 
-    public Usuario buscarPorEmail(String email) {
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
-    }
-
     public Usuario buscarPorId(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
@@ -98,5 +93,45 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
         usuario.setActivo(true);
         usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public Usuario actualizarPerfil(Long usuarioId, String nombre, String apellido, String telefono) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + usuarioId));
+
+        if (nombre == null || nombre.isBlank() || apellido == null || apellido.isBlank()) {
+            throw new BusinessException("El nombre y el apellido son obligatorios");
+        }
+
+        // Solo estos tres campos: email, password, rol, activo y fechaRegistro
+        // nunca se tocan desde el perfil del propio usuario.
+        usuario.setNombre(nombre);
+        usuario.setApellido(apellido);
+        usuario.setTelefono(telefono);
+        return usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public Usuario cambiarPassword(Long usuarioId, String passwordActual, String passwordNueva,
+            String passwordConfirmacion) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + usuarioId));
+
+        if (!passwordEncoder.matches(passwordActual, usuario.getPassword())) {
+            throw new BusinessException("La contraseña actual no es correcta");
+        }
+        if (passwordNueva == null || passwordNueva.length() < 8) {
+            throw new BusinessException("La nueva contraseña debe tener al menos 8 caracteres");
+        }
+        if (!passwordNueva.equals(passwordConfirmacion)) {
+            throw new BusinessException("Las contraseñas nuevas no coinciden");
+        }
+        if (passwordNueva.equals(passwordActual)) {
+            throw new BusinessException("La nueva contraseña debe ser diferente a la actual");
+        }
+
+        usuario.setPassword(passwordEncoder.encode(passwordNueva));
+        return usuarioRepository.save(usuario);
     }
 }

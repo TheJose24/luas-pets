@@ -2,11 +2,14 @@ package com.luaspets.controller;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Locale;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,21 +23,27 @@ import com.luaspets.dto.SemanaCalendario;
 import com.luaspets.exception.BusinessException;
 import com.luaspets.model.Cita;
 import com.luaspets.model.EstadoCita;
+import com.luaspets.repository.CitaRepository;
 import com.luaspets.service.CalendarioService;
 import com.luaspets.service.CitaService;
 import com.luaspets.service.UsuarioService;
+import com.luaspets.util.PaginacionUtil;
 
 @Controller
 @RequestMapping("/admin/citas")
 public class AdminCitaController {
 
+    private static final int TAMANIO_PAGINA = 10;
+
     private final CitaService citaService;
+    private final CitaRepository citaRepository;
     private final UsuarioService usuarioService;
     private final CalendarioService calendarioService;
 
-    public AdminCitaController(CitaService citaService, UsuarioService usuarioService,
-            CalendarioService calendarioService) {
+    public AdminCitaController(CitaService citaService, CitaRepository citaRepository,
+            UsuarioService usuarioService, CalendarioService calendarioService) {
         this.citaService = citaService;
+        this.citaRepository = citaRepository;
         this.usuarioService = usuarioService;
         this.calendarioService = calendarioService;
     }
@@ -47,45 +56,59 @@ public class AdminCitaController {
             @RequestParam(required = false) String buscar,
             @RequestParam(defaultValue = "calendario") String vista,
             @RequestParam(required = false) String semana,
+            @RequestParam(defaultValue = "0") int page,
             Model model) {
-
-        List<Cita> todas = citaService.listarTodas();
 
         String especieNorm = normalizar(especie);
         String buscarNorm = normalizar(buscar);
 
-        List<Cita> citasFiltradas = todas.stream()
-                .filter(c -> estado == null || c.getEstado() == estado)
-                .filter(c -> doctorId == null || doctorId.equals(c.getDoctor().getId()))
-                .filter(c -> especieNorm == null || especieNorm.equals(c.getMascota().getEspecie()))
-                .filter(c -> buscarNorm == null || coincideBusqueda(c, buscarNorm))
-                .toList();
-
-        model.addAttribute("citas", citasFiltradas);
         model.addAttribute("vista", vista);
 
         if ("calendario".equals(vista)) {
-            LocalDate lunes = resolverLunes(semana);
+            LocalDate lunes = calendarioService.resolverLunes(semana);
+            LocalDate domingo = lunes.plusDays(6);
+            LocalDateTime desdeRango = LocalDateTime.of(lunes, LocalTime.MIN);
+            LocalDateTime hastaRango = LocalDateTime.of(domingo, LocalTime.of(23, 59, 59));
+
+            // Acotado por la semana visible en vez de cargar todas las citas del
+            // sistema (ver informe de la tarea de paginacion: esto reemplaza el
+            // citaService.listarTodas() + filtrado en memoria que habia antes).
+            List<Cita> citasSemana = citaRepository.buscarEnRangoConFiltros(desdeRango, hastaRango, estado,
+                    doctorId, especieNorm, buscarNorm);
+
             // El admin no tiene un endpoint de detalle de cita propio (ese destino
             // es del cliente y del doctor, y ambos validan propiedad); por eso sus
             // tarjetas del calendario no llevan URL y la vista las muestra como
             // informacion de solo lectura, sin ser clicables.
-            SemanaCalendario semanaCalendario = calendarioService.construirSemana(citasFiltradas, lunes, null);
+            SemanaCalendario semanaCalendario = calendarioService.construirSemana(citasSemana, lunes, null);
             model.addAttribute("semana", semanaCalendario);
+        } else {
+            int paginaSolicitada = Math.max(page, 0);
+            PageRequest pageRequest = PageRequest.of(paginaSolicitada, TAMANIO_PAGINA,
+                    Sort.by("fechaHora").descending());
+            Page<Cita> resultado = citaRepository.buscarTodasConFiltros(estado, doctorId, especieNorm, buscarNorm,
+                    pageRequest);
+
+            model.addAttribute("page", resultado);
+            model.addAttribute("numerosPagina", PaginacionUtil.numerosPagina(resultado));
+            model.addAttribute("citas", resultado.getContent());
+
+            long total = resultado.getTotalElements();
+            long desde = total == 0 ? 0 : (long) paginaSolicitada * TAMANIO_PAGINA + 1;
+            long hasta = total == 0 ? 0 : desde + resultado.getNumberOfElements() - 1;
+            model.addAttribute("desde", desde);
+            model.addAttribute("hasta", hasta);
         }
 
-        model.addAttribute("doctores", usuarioService.listarDoctoresActivos());
-        model.addAttribute("especies", todas.stream()
-                .map(c -> c.getMascota().getEspecie())
-                .filter(e -> e != null && !e.isBlank())
-                .distinct()
-                .sorted()
-                .toList());
+        boolean hayFiltros = estado != null || doctorId != null || especieNorm != null || buscarNorm != null;
 
+        model.addAttribute("doctores", usuarioService.listarDoctoresActivos());
+        model.addAttribute("especies", citaRepository.findEspeciesDistintasEnCitas());
         model.addAttribute("estadoSel", estado);
         model.addAttribute("doctorSel", doctorId);
         model.addAttribute("especieSel", especieNorm);
         model.addAttribute("buscar", buscarNorm);
+        model.addAttribute("hayFiltros", hayFiltros);
         model.addAttribute("queryFiltros", construirQueryFiltros(estado, doctorId, especieNorm, buscarNorm));
 
         return "admin/citas/lista";
@@ -99,6 +122,7 @@ public class AdminCitaController {
             @RequestParam(required = false) String buscar,
             @RequestParam(defaultValue = "calendario") String vista,
             @RequestParam(required = false) String semana,
+            @RequestParam(required = false) Integer page,
             RedirectAttributes redirectAttributes) {
         try {
             citaService.confirmarCita(citaId);
@@ -114,35 +138,14 @@ public class AdminCitaController {
         if (semana != null && !semana.isBlank()) {
             query.append("&semana=").append(semana);
         }
-        return "redirect:/admin/citas?" + query;
-    }
-
-    private LocalDate resolverLunes(String semana) {
-        if (semana != null && !semana.isBlank()) {
-            try {
-                return LocalDate.parse(semana).with(DayOfWeek.MONDAY);
-            } catch (Exception e) {
-                return LocalDate.now().with(DayOfWeek.MONDAY);
-            }
+        if (page != null) {
+            query.append("&page=").append(page);
         }
-        return LocalDate.now().with(DayOfWeek.MONDAY);
+        return "redirect:/admin/citas?" + query;
     }
 
     private String normalizar(String valor) {
         return (valor != null && !valor.isBlank()) ? valor.trim() : null;
-    }
-
-    private boolean coincideBusqueda(Cita cita, String termino) {
-        String t = termino.toLowerCase(Locale.ROOT);
-        return contiene(cita.getMascota().getNombre(), t)
-                || contiene(cita.getMascota().getCliente().getNombre(), t)
-                || contiene(cita.getMascota().getCliente().getApellido(), t)
-                || contiene(cita.getDoctor().getNombre(), t)
-                || contiene(cita.getDoctor().getApellido(), t);
-    }
-
-    private boolean contiene(String valor, String termino) {
-        return valor != null && valor.toLowerCase(Locale.ROOT).contains(termino);
     }
 
     private String construirQueryFiltros(EstadoCita estado, Long doctorId, String especie, String buscar) {

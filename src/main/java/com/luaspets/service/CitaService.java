@@ -1,6 +1,7 @@
 package com.luaspets.service;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -26,6 +27,10 @@ public class CitaService {
     private static final Logger log = LoggerFactory.getLogger(CitaService.class);
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    private static final LocalTime HORA_APERTURA = LocalTime.of(8, 0);
+    private static final LocalTime HORA_CIERRE = LocalTime.of(20, 0);
+    private static final long HORAS_ANTICIPACION_MINIMA = 24;
+
     private final CitaRepository citaRepository;
     private final MascotaRepository mascotaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -47,6 +52,8 @@ public class CitaService {
         Usuario doctor = usuarioRepository.findById(cita.getDoctor().getId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Doctor no encontrado con id: " + cita.getDoctor().getId()));
+
+        validarHorario(cita.getFechaHora());
 
         if (citaRepository.existsByDoctorIdAndFechaHoraAndEstadoNot(doctor.getId(), cita.getFechaHora(),
                 EstadoCita.CANCELADA)) {
@@ -81,6 +88,7 @@ public class CitaService {
         if (cita.getEstado() != EstadoCita.PENDIENTE && cita.getEstado() != EstadoCita.CONFIRMADA) {
             throw new BusinessException("Solo se pueden reprogramar citas pendientes o confirmadas");
         }
+        validarHorario(nuevaFechaHora);
         boolean ocupado = citaRepository
                 .findByDoctorIdAndFechaHoraAndEstadoNot(cita.getDoctor().getId(), nuevaFechaHora, EstadoCita.CANCELADA)
                 .stream()
@@ -161,20 +169,26 @@ public class CitaService {
         return citaRepository.findByMascotaIdOrderByFechaHoraDesc(mascotaId);
     }
 
-    public List<Cita> listarPorDoctor(Long doctorId) {
-        return citaRepository.findByDoctorIdOrderByFechaHoraAsc(doctorId);
-    }
-
-    public List<Cita> listarTodas() {
-        return citaRepository.findAllByOrderByFechaHoraDesc();
-    }
-
-    public List<Cita> listarPorEstado(EstadoCita estado) {
-        return citaRepository.findByEstado(estado);
-    }
-
     public Cita buscarPorId(Long id) {
         return citaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada con id: " + id));
+    }
+
+    // Se aplica solo al agendar y reprogramar (crear/mover una cita hacia un
+    // horario nuevo). NO se aplica a confirmar, cancelar ni marcar como
+    // atendida: esas operan sobre citas ya existentes, y pueden referirse a
+    // fechas pasadas (por ejemplo, atender una cita de hace 10 minutos) sin
+    // que eso sea un error.
+    private void validarHorario(LocalDateTime fechaHora) {
+        if (fechaHora == null) {
+            throw new BusinessException("Debes indicar la fecha y hora de la cita");
+        }
+        if (fechaHora.isBefore(LocalDateTime.now().plusHours(HORAS_ANTICIPACION_MINIMA))) {
+            throw new BusinessException("Las citas deben agendarse con al menos 24 horas de anticipación");
+        }
+        LocalTime hora = fechaHora.toLocalTime();
+        if (hora.isBefore(HORA_APERTURA) || hora.isAfter(HORA_CIERRE)) {
+            throw new BusinessException("El horario de atención es de 08:00 a 20:00");
+        }
     }
 }

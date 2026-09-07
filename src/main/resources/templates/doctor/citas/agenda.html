@@ -17,7 +17,8 @@
                 <h1 class="lp-page-title">Mi agenda</h1>
                 <p class="lp-page-subtitle">Consulta y atiende las citas asignadas a ti.</p>
             </div>
-            <span class="lp-chip flex-shrink-0" th:text="${#lists.size(citas)} + ' citas filtradas'">0 citas filtradas</span>
+            <span class="lp-chip flex-shrink-0"
+                th:text="${(vista == 'calendario' ? semana.totalCitasSemana : page.totalElements)} + ' citas filtradas'">0 citas filtradas</span>
         </div>
 
         <div class="lp-alert lp-alert-success" th:if="${param.atendida}">
@@ -75,8 +76,11 @@
         <div th:if="${vista != 'calendario'}">
             <div th:if="${#lists.isEmpty(citas)}" class="lp-card lp-empty-state">
                 <i class="bi bi-calendar-x"></i>
-                <h5 class="fw-bold mb-1">No tienes citas agendadas</h5>
-                <p class="mb-0">Aquí aparecerán las citas que te asignen.</p>
+                <h5 class="fw-bold mb-1" th:if="${hayFiltros}">No se encontraron citas con esos criterios.</h5>
+                <div th:unless="${hayFiltros}">
+                    <h5 class="fw-bold mb-1">No tienes citas agendadas</h5>
+                    <p class="mb-0">Aquí aparecerán las citas que te asignen.</p>
+                </div>
             </div>
 
             <div class="lp-card p-0" th:unless="${#lists.isEmpty(citas)}">
@@ -154,6 +158,8 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/doctor/citas', ${queryFiltros + '&vista=lista'}, ${desde}, ${hasta})}"></div>
             </div>
         </div>
     </div>

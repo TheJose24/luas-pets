@@ -6,6 +6,5 @@ target/
 *.iml
 *.log
 src/main/resources/application-local.properties
-INFORME-AUDITORIA.md
-INFORME-AUDITORIA-2.md
+docs/
 README.md

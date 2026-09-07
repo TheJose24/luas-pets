@@ -52,6 +52,7 @@ public class NotificacionResponse {
             case PEDIDO_ESTADO -> "bi-bag";
             case CLIENTE_NUEVO -> "bi-person-plus";
             case STOCK_BAJO -> "bi-exclamation-triangle";
+            case CITA_RECORDATORIO -> "bi-alarm";
         };
     }
 
@@ -66,6 +67,7 @@ public class NotificacionResponse {
             case PEDIDO_ESTADO -> "info";
             case CLIENTE_NUEVO -> "info";
             case STOCK_BAJO -> "danger";
+            case CITA_RECORDATORIO -> "warning";
         };
     }
 

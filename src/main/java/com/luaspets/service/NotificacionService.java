@@ -6,6 +6,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,12 +68,19 @@ public class NotificacionService {
         return notificacionRepository.countByDestinatarioIdAndLeidaFalse(usuarioId);
     }
 
+    // Usado por RecordatorioService para el control de duplicados: se consulta
+    // la tabla en cada ejecucion (destinatario + tipo + url), no una marca en
+    // la entidad Cita, para que sea robusto ante reinicios de la aplicacion.
+    public boolean existeNotificacion(Long destinatarioId, TipoNotificacion tipo, String url) {
+        return notificacionRepository.existsByDestinatarioIdAndTipoAndUrl(destinatarioId, tipo, url);
+    }
+
     public List<Notificacion> listarRecientes(Long usuarioId) {
         return notificacionRepository.findTop10ByDestinatarioIdOrderByFechaCreacionDesc(usuarioId);
     }
 
-    public List<Notificacion> listarTodas(Long usuarioId) {
-        return notificacionRepository.findByDestinatarioIdOrderByFechaCreacionDesc(usuarioId);
+    public Page<Notificacion> listarTodasPaginado(Long usuarioId, Pageable pageable) {
+        return notificacionRepository.findByDestinatarioIdOrderByFechaCreacionDesc(usuarioId, pageable);
     }
 
     @Transactional

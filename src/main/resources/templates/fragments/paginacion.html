@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    Fragmento reutilizable de paginacion. Parametros:
+      - page: el objeto Page devuelto por el repositorio.
+      - numerosPagina: List<Integer> ya calculada en el controlador con
+        com.luaspets.util.PaginacionUtil.numerosPagina(page) (maximo 7 numeros,
+        centrados en la pagina actual). El valor -1 (PaginacionUtil.SEPARADOR)
+        marca donde va un "…"; un numero de pagina real nunca es negativo, asi
+        que no hay ambiguedad posible con ese centinela.
+      - baseUrl: ruta base del listado (por ejemplo '/admin/mascotas'), sin query string.
+      - queryFiltros: cadena ya construida en el controlador con los filtros activos,
+        formato "&estado=PENDIENTE&buscar=luna" (vacia si no hay filtros).
+      - desde / hasta: numeros de resultado calculados en el controlador.
+    Si solo hay una pagina no renderiza nada: no aporta ninguna navegacion util.
+
+    Esta plantilla solo itera numerosPagina y pinta cada elemento: no calcula
+    ningun rango ni usa el operador T() de SpringEL (prohibido en este
+    proyecto porque una expresion asi puede compilar bien y solo fallar al
+    renderizar la vista, ya en produccion). Todo el calculo vive en
+    PaginacionUtil, cubierto por PaginacionUtilTest.
+-->
+<div th:fragment="controles(page, numerosPagina, baseUrl, queryFiltros, desde, hasta)" th:if="${page.totalPages > 1}"
+    class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3">
+
+    <span class="small" style="color: var(--lp-body);"
+        th:text="'Mostrando ' + ${desde} + '-' + ${hasta} + ' de ' + ${page.totalElements} + ' resultados'">
+        Mostrando</span>
+
+    <nav aria-label="Paginación">
+        <ul class="pagination pagination-sm mb-0 flex-wrap">
+            <li class="page-item" th:if="${!page.first}">
+                <a class="page-link" th:href="${baseUrl + '?page=' + (page.number - 1) + queryFiltros}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            <li class="page-item disabled" th:if="${page.first}">
+                <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+            </li>
+
+            <th:block th:each="numero : ${numerosPagina}">
+                <li class="page-item disabled" th:if="${numero == -1}">
+                    <span class="page-link">…</span>
+                </li>
+                <li class="page-item" th:unless="${numero == -1}"
+                    th:classappend="${numero == page.number} ? 'active'">
+                    <a class="page-link" th:href="${baseUrl + '?page=' + numero + queryFiltros}" th:text="${numero + 1}">1</a>
+                </li>
+            </th:block>
+
+            <li class="page-item" th:if="${!page.last}">
+                <a class="page-link" th:href="${baseUrl + '?page=' + (page.number + 1) + queryFiltros}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item disabled" th:if="${page.last}">
+                <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+</body>
+</html>

@@ -8,6 +8,9 @@
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/luaspets.css}" href="/css/luaspets.css">
     <meta name="_csrf" th:content="${_csrf.token}" />
     <meta name="_csrf_header" th:content="${_csrf.headerName}" />
@@ -119,6 +122,9 @@
     </nav>
 
     <div class="lp-sidebar-footer">
+        <a th:href="@{/perfil}" class="lp-sidebar-link">
+            <i class="bi bi-person-circle"></i> <span>Mi perfil</span>
+        </a>
         <form th:action="@{/logout}" method="post">
             <button type="submit" class="lp-sidebar-link border-0 bg-transparent w-100 text-start">
                 <i class="bi bi-box-arrow-right"></i> <span>Cerrar sesión</span>

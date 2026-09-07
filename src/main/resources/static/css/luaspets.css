@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 :root {
     --lp-primary: #0f766e;
     --lp-primary-dark: #115e59;
@@ -43,67 +41,6 @@ body {
     box-shadow: 0 10px 25px rgba(16, 24, 40, 0.08);
     transform: translateY(-2px);
 }
-
-/* ==========================================
-   TARJETAS DE MÉTRICA (stats)
-   ========================================== */
-.lp-stat-card {
-    position: relative;
-    background-color: var(--lp-surface);
-    border: 1px solid var(--lp-border);
-    border-radius: 14px;
-    padding: 1.25rem;
-    overflow: hidden;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.lp-stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background-color: var(--lp-primary);
-}
-
-.lp-stat-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background-color: var(--lp-primary-soft);
-    color: var(--lp-primary-dark);
-    font-size: 1.1rem;
-    margin-bottom: 0.75rem;
-}
-
-.lp-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--lp-ink);
-    line-height: 1.2;
-}
-
-.lp-stat-label {
-    font-size: 0.85rem;
-    color: var(--lp-body);
-    margin-bottom: 0;
-}
-
-.lp-stat-info::before { background-color: var(--lp-info); }
-.lp-stat-info .lp-stat-icon { background-color: #dbeafe; color: var(--lp-info); }
-
-.lp-stat-warning::before { background-color: var(--lp-warning); }
-.lp-stat-warning .lp-stat-icon { background-color: #fef3c7; color: var(--lp-warning); }
-
-.lp-stat-danger::before { background-color: var(--lp-danger); }
-.lp-stat-danger .lp-stat-icon { background-color: #fee2e2; color: var(--lp-danger); }
-
-.lp-stat-primary::before { background-color: var(--lp-primary); }
-.lp-stat-primary .lp-stat-icon { background-color: var(--lp-primary-soft); color: var(--lp-primary-dark); }
 
 /* ==========================================
    TARJETAS DE MÉTRICA (dashboard cliente)
@@ -280,14 +217,14 @@ body {
     color: var(--lp-primary-dark);
 }
 
+.lp-badge-primary {
+    background-color: var(--lp-primary);
+    color: #ffffff;
+}
+
 .lp-badge-secondary {
     background-color: #e5e7eb;
     color: #475569;
-}
-
-.lp-badge-danger {
-    background-color: #fee2e2;
-    color: #991b1b;
 }
 
 /* ==========================================
@@ -379,24 +316,6 @@ body {
     background-color: var(--lp-primary);
     border-color: var(--lp-primary);
     color: #ffffff;
-}
-
-/* ==========================================
-   CONTADOR CIRCULAR (ej. carrito)
-   ========================================== */
-.lp-counter {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background-color: var(--lp-warning);
-    color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    margin-left: 0.4rem;
 }
 
 /* ==========================================

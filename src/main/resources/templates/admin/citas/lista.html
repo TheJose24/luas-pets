@@ -21,7 +21,8 @@
                 <h1 class="lp-page-title">Gestión de citas</h1>
                 <p class="lp-page-subtitle">Organiza y administra las citas veterinarias de toda la clínica.</p>
             </div>
-            <span class="lp-chip flex-shrink-0" th:text="${#lists.size(citas)} + ' citas filtradas'">0 citas filtradas</span>
+            <span class="lp-chip flex-shrink-0"
+                th:text="${(vista == 'calendario' ? semana.totalCitasSemana : page.totalElements)} + ' citas filtradas'">0 citas filtradas</span>
         </div>
 
         <div class="lp-alert lp-alert-success" th:if="${exito}">
@@ -90,7 +91,8 @@
         <div th:if="${vista != 'calendario'}">
             <div th:if="${#lists.isEmpty(citas)}" class="lp-card lp-empty-state">
                 <i class="bi bi-calendar-x"></i>
-                <h5 class="fw-bold mb-1">No hay citas registradas para este filtro</h5>
+                <h5 class="fw-bold mb-1" th:if="${hayFiltros}">No se encontraron citas con esos criterios.</h5>
+                <h5 class="fw-bold mb-1" th:unless="${hayFiltros}">No hay citas registradas todavía.</h5>
             </div>
 
             <div class="lp-card p-0" th:unless="${#lists.isEmpty(citas)}">
@@ -133,6 +135,7 @@
                                             <input type="hidden" name="buscar" th:value="${buscar}" />
                                             <input type="hidden" name="vista" th:value="${vista}" />
                                             <input type="hidden" name="semana" th:value="${semana}" />
+                                            <input type="hidden" name="page" th:value="${page.number}" />
                                         </form>
                                         <button type="button" class="lp-btn-outline btn-sm py-1 px-2"
                                             data-bs-toggle="modal" th:attr="data-bs-target=|#modalConfirmarCita${cita.id}|">
@@ -166,6 +169,8 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/admin/citas', ${queryFiltros + '&vista=lista'}, ${desde}, ${hasta})}"></div>
             </div>
         </div>
     </div>

@@ -108,18 +108,6 @@ public class PedidoService {
         return guardado;
     }
 
-    public List<Pedido> listarPorCliente(Long clienteId) {
-        return pedidoRepository.findByClienteIdOrderByFechaDesc(clienteId);
-    }
-
-    public List<Pedido> listarTodos() {
-        return pedidoRepository.findAllByOrderByFechaDesc();
-    }
-
-    public List<Pedido> listarPorEstado(EstadoPedido estado) {
-        return pedidoRepository.findByEstado(estado);
-    }
-
     public Pedido buscarPorId(Long id) {
         return pedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + id));

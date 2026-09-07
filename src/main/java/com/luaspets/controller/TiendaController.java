@@ -57,7 +57,10 @@ public class TiendaController {
         model.addAttribute("categoriaSel", categoria);
         model.addAttribute("buscar", buscar);
         model.addAttribute("orden", ordenNorm);
-        model.addAttribute("totalProductos", tarjetas.size());
+        // catalogo.html no lo lee (el badge del carrito se pinta por AJAX vía
+        // carrito.js), pero TiendaCarritoPedidoIntegrationTest sí verifica este
+        // atributo directamente sobre el Model tras agregar un producto: se
+        // mantiene por eso, no es código muerto.
         model.addAttribute("itemsCarrito", carritoService.contarItems());
         return "cliente/tienda/catalogo";
     }

@@ -2,11 +2,14 @@ package com.luaspets.controller;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Locale;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -24,22 +27,28 @@ import com.luaspets.exception.BusinessException;
 import com.luaspets.model.Cita;
 import com.luaspets.model.EstadoCita;
 import com.luaspets.model.HistorialMedico;
+import com.luaspets.repository.CitaRepository;
 import com.luaspets.security.CustomUserDetails;
 import com.luaspets.service.CalendarioService;
 import com.luaspets.service.CitaService;
 import com.luaspets.service.HistorialMedicoService;
+import com.luaspets.util.PaginacionUtil;
 
 @Controller
 @RequestMapping("/doctor/citas")
 public class DoctorCitaController {
 
+    private static final int TAMANIO_PAGINA = 10;
+
     private final CitaService citaService;
+    private final CitaRepository citaRepository;
     private final HistorialMedicoService historialMedicoService;
     private final CalendarioService calendarioService;
 
-    public DoctorCitaController(CitaService citaService, HistorialMedicoService historialMedicoService,
-            CalendarioService calendarioService) {
+    public DoctorCitaController(CitaService citaService, CitaRepository citaRepository,
+            HistorialMedicoService historialMedicoService, CalendarioService calendarioService) {
         this.citaService = citaService;
+        this.citaRepository = citaRepository;
         this.historialMedicoService = historialMedicoService;
         this.calendarioService = calendarioService;
     }
@@ -50,36 +59,55 @@ public class DoctorCitaController {
             @RequestParam(required = false) String buscar,
             @RequestParam(defaultValue = "calendario") String vista,
             @RequestParam(required = false) String semana,
+            @RequestParam(defaultValue = "0") int page,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
         Long doctorId = userDetails.getUsuario().getId();
-        List<Cita> propias = citaService.listarPorDoctor(doctorId);
-
         String buscarNorm = normalizar(buscar);
 
-        List<Cita> citasFiltradas = propias.stream()
-                .filter(c -> estado == null || c.getEstado() == estado)
-                .filter(c -> buscarNorm == null || coincideBusqueda(c, buscarNorm))
-                .toList();
-
-        model.addAttribute("citas", citasFiltradas);
         model.addAttribute("vista", vista);
 
         if ("calendario".equals(vista)) {
-            LocalDate lunes = resolverLunes(semana);
+            LocalDate lunes = calendarioService.resolverLunes(semana);
+            LocalDate domingo = lunes.plusDays(6);
+            LocalDateTime desdeRango = LocalDateTime.of(lunes, LocalTime.MIN);
+            LocalDateTime hastaRango = LocalDateTime.of(domingo, LocalTime.of(23, 59, 59));
+
+            List<Cita> citasSemana = citaRepository.buscarEnRangoPorDoctorConFiltros(doctorId, desdeRango,
+                    hastaRango, estado, buscarNorm);
+
             // A diferencia del admin, el doctor si tiene destinos utiles: atender la
             // cita (si sigue activa) o ver la ficha del paciente (si ya se resolvio),
             // asi que cada tarjeta de su calendario es clicable.
-            SemanaCalendario semanaCalendario = calendarioService.construirSemana(citasFiltradas, lunes,
+            SemanaCalendario semanaCalendario = calendarioService.construirSemana(citasSemana, lunes,
                     cita -> (cita.getEstado() != EstadoCita.ATENDIDA && cita.getEstado() != EstadoCita.CANCELADA)
                             ? "/doctor/citas/" + cita.getId() + "/atender"
                             : "/doctor/pacientes/" + cita.getMascota().getId());
             model.addAttribute("semana", semanaCalendario);
+        } else {
+            int paginaSolicitada = Math.max(page, 0);
+            PageRequest pageRequest = PageRequest.of(paginaSolicitada, TAMANIO_PAGINA,
+                    Sort.by("fechaHora").ascending());
+            Page<Cita> resultado = citaRepository.buscarPorDoctorConFiltros(doctorId, estado, buscarNorm,
+                    pageRequest);
+
+            model.addAttribute("page", resultado);
+            model.addAttribute("numerosPagina", PaginacionUtil.numerosPagina(resultado));
+            model.addAttribute("citas", resultado.getContent());
+
+            long total = resultado.getTotalElements();
+            long desde = total == 0 ? 0 : (long) paginaSolicitada * TAMANIO_PAGINA + 1;
+            long hasta = total == 0 ? 0 : desde + resultado.getNumberOfElements() - 1;
+            model.addAttribute("desde", desde);
+            model.addAttribute("hasta", hasta);
         }
+
+        boolean hayFiltros = estado != null || buscarNorm != null;
 
         model.addAttribute("estadoSel", estado);
         model.addAttribute("buscar", buscarNorm);
+        model.addAttribute("hayFiltros", hayFiltros);
         model.addAttribute("queryFiltros", construirQueryFiltros(estado, buscarNorm));
 
         return "doctor/citas/agenda";
@@ -133,30 +161,8 @@ public class DoctorCitaController {
         }
     }
 
-    private LocalDate resolverLunes(String semana) {
-        if (semana != null && !semana.isBlank()) {
-            try {
-                return LocalDate.parse(semana).with(DayOfWeek.MONDAY);
-            } catch (Exception e) {
-                return LocalDate.now().with(DayOfWeek.MONDAY);
-            }
-        }
-        return LocalDate.now().with(DayOfWeek.MONDAY);
-    }
-
     private String normalizar(String valor) {
         return (valor != null && !valor.isBlank()) ? valor.trim() : null;
-    }
-
-    private boolean coincideBusqueda(Cita cita, String termino) {
-        String t = termino.toLowerCase(Locale.ROOT);
-        return contiene(cita.getMascota().getNombre(), t)
-                || contiene(cita.getMascota().getCliente().getNombre(), t)
-                || contiene(cita.getMascota().getCliente().getApellido(), t);
-    }
-
-    private boolean contiene(String valor, String termino) {
-        return valor != null && valor.toLowerCase(Locale.ROOT).contains(termino);
     }
 
     private String construirQueryFiltros(EstadoCita estado, String buscar) {

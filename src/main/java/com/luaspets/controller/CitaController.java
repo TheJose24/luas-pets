@@ -30,6 +30,8 @@ import com.luaspets.service.UsuarioService;
 public class CitaController {
 
     private static final DateTimeFormatter DATETIME_LOCAL_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final long HORAS_ANTICIPACION_MINIMA = 24;
+    private static final long MESES_ANTICIPACION_MAXIMA = 6;
 
     private final CitaService citaService;
     private final MascotaService mascotaService;
@@ -51,10 +53,9 @@ public class CitaController {
     @GetMapping("/nueva")
     public String nuevaForm(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long clienteId = userDetails.getUsuario().getId();
-        model.addAttribute("cita", new Cita());
         model.addAttribute("mascotas", mascotaService.listarPorCliente(clienteId));
         model.addAttribute("doctores", usuarioService.listarDoctoresActivos());
-        model.addAttribute("minFechaHora", LocalDateTime.now().format(DATETIME_LOCAL_FORMAT));
+        agregarLimitesDeFecha(model);
         return "cliente/citas/formulario";
     }
 
@@ -95,7 +96,7 @@ public class CitaController {
         Cita cita = citaService.buscarPorId(id);
         validarPropietario(cita, userDetails);
         model.addAttribute("cita", cita);
-        model.addAttribute("minFechaHora", LocalDateTime.now().format(DATETIME_LOCAL_FORMAT));
+        agregarLimitesDeFecha(model);
         return "cliente/citas/reprogramar";
     }
 
@@ -127,6 +128,13 @@ public class CitaController {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/cliente/citas";
+    }
+
+    private void agregarLimitesDeFecha(Model model) {
+        LocalDateTime ahora = LocalDateTime.now();
+        model.addAttribute("minFechaHora", ahora.plusHours(HORAS_ANTICIPACION_MINIMA).format(DATETIME_LOCAL_FORMAT));
+        model.addAttribute("maxFechaHora",
+                ahora.plusMonths(MESES_ANTICIPACION_MAXIMA).format(DATETIME_LOCAL_FORMAT));
     }
 
     private void validarPropietario(Cita cita, CustomUserDetails userDetails) {

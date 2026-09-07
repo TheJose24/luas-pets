@@ -111,13 +111,31 @@ class CitaIntegrationTest {
         return usuarioRepository.findByEmail("lucio@gmail.com").orElseThrow();
     }
 
+    // Helper para construir fechas de cita validas independientemente de la
+    // hora a la que corra la suite: fija la hora a las 14:00 (dentro de
+    // 08:00-20:00) y usa un minimo de 2 dias de adelanto, que siempre deja un
+    // margen de al menos ~34 horas respecto a "ahora" (mas que las 24 horas
+    // minimas exigidas por CitaService.validarHorario), evitando fallos
+    // intermitentes por estar justo en el limite. Se eligio 14:00 (y no 10:00)
+    // a proposito: DataSeeder siembra una cita PENDIENTE para doctor@luaspets.com
+    // en "ahora + 3 dias a las 10:00", y usar la misma hora aqui chocaria con
+    // la validacion de "el doctor ya tiene una cita en ese horario" cuando el
+    // dia calculado coincidiera con el del seeder.
+    private LocalDateTime fechaFutura(long diasAdelante) {
+        return LocalDateTime.now().plusDays(diasAdelante).withHour(14).withMinute(0).withSecond(0).withNano(0);
+    }
+
+    private String fechaFuturaTexto(long diasAdelante) {
+        return fechaFutura(diasAdelante).format(FORMAT);
+    }
+
     @Test
     void agendarCitaCasoFeliz() throws Exception {
         MockHttpSession session = registrarYLoguearCliente("agenda.feliz@test.com");
         Usuario cliente = usuarioRepository.findByEmail("agenda.feliz@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(session)
                         .param("mascotaId", mascota.getId().toString())
@@ -136,7 +154,7 @@ class CitaIntegrationTest {
     @Test
     void dosCitasMismoDoctorMismaHoraLaSegundaFalla() throws Exception {
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(2).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         MockHttpSession sesionA = registrarYLoguearCliente("clienteA.horario@test.com");
         Usuario clienteA = usuarioRepository.findByEmail("clienteA.horario@test.com").orElseThrow();
@@ -172,7 +190,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("reprograma@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fechaOriginal = LocalDateTime.now().plusDays(3).format(FORMAT);
+        String fechaOriginal = fechaFuturaTexto(3);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(session)
                 .param("mascotaId", mascota.getId().toString())
@@ -181,7 +199,7 @@ class CitaIntegrationTest {
                 .param("motivo", "Cita a reprogramar"));
 
         Cita cita = citaRepository.findByMascotaClienteIdOrderByFechaHoraDesc(cliente.getId()).get(0);
-        LocalDateTime nuevaFecha = LocalDateTime.now().plusDays(5).withSecond(0).withNano(0);
+        LocalDateTime nuevaFecha = fechaFutura(5);
 
         mvc().perform(post("/cliente/citas/{id}/reprogramar", cita.getId()).with(csrf()).session(session)
                         .param("nuevaFechaHora", nuevaFecha.format(FORMAT)))
@@ -198,7 +216,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("cancela.atendida@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -232,7 +250,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("historial@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -263,7 +281,7 @@ class CitaIntegrationTest {
         mascota.setPeso(new BigDecimal("10.00"));
         mascota = mascotaRepository.save(mascota);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -294,7 +312,7 @@ class CitaIntegrationTest {
         mascota.setPeso(new BigDecimal("10.00"));
         mascota = mascotaRepository.save(mascota);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -325,7 +343,7 @@ class CitaIntegrationTest {
         mascota.setAlergias(null);
         mascota = mascotaRepository.save(mascota);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -384,7 +402,7 @@ class CitaIntegrationTest {
         Usuario clienteA = usuarioRepository.findByEmail("propietarioA@test.com").orElseThrow();
         Mascota mascotaA = crearMascotaPara(clienteA);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionA)
                 .param("mascotaId", mascotaA.getId().toString())
@@ -406,7 +424,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("paciente.ficha@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -447,7 +465,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("admin.dashboard@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -503,7 +521,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("calendario.doctor@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -532,7 +550,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("calendario.admin@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -563,7 +581,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("confirmar.pendiente@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -590,7 +608,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("confirmar.doble@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -617,7 +635,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("confirmar.atendida@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -647,7 +665,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("confirmar.ajena@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -670,7 +688,7 @@ class CitaIntegrationTest {
         Usuario cliente = usuarioRepository.findByEmail("confirmar.luego.reprograma@test.com").orElseThrow();
         Mascota mascota = crearMascotaPara(cliente);
         Usuario doctor = doctorSeed();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        String fecha = fechaFuturaTexto(2);
 
         mvc().perform(post("/cliente/citas/nueva").with(csrf()).session(sesionCliente)
                 .param("mascotaId", mascota.getId().toString())
@@ -683,7 +701,7 @@ class CitaIntegrationTest {
         assertThat(citaRepository.findById(cita.getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoCita.CONFIRMADA);
 
-        LocalDateTime nuevaFecha = LocalDateTime.now().plusDays(6).withSecond(0).withNano(0);
+        LocalDateTime nuevaFecha = fechaFutura(6);
         mvc().perform(post("/cliente/citas/{id}/reprogramar", cita.getId()).with(csrf()).session(sesionCliente)
                         .param("nuevaFechaHora", nuevaFecha.format(FORMAT)))
                 .andExpect(status().is3xxRedirection())
@@ -698,5 +716,213 @@ class CitaIntegrationTest {
                 .andExpect(redirectedUrl("/cliente/citas"));
 
         assertThat(citaRepository.findById(cita.getId()).orElseThrow().getEstado()).isEqualTo(EstadoCita.CANCELADA);
+    }
+
+    @Test
+    void agendarCitaA0759FallaConMensajeDeHorario() throws Exception {
+        registrarYLoguearCliente("horario.0759@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("horario.0759@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fechaFutura(2).withHour(7).withMinute(59));
+        cita.setMotivo("Muy temprano");
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> citaService.agendarCita(cita));
+        assertThat(ex.getMessage()).isEqualTo("El horario de atención es de 08:00 a 20:00");
+    }
+
+    @Test
+    void agendarCitaALas2000ExactasTieneExito() throws Exception {
+        registrarYLoguearCliente("horario.2000@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("horario.2000@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fechaFutura(2).withHour(20).withMinute(0));
+        cita.setMotivo("Ultimo turno del dia");
+
+        Cita guardada = citaService.agendarCita(cita);
+        assertThat(guardada.getId()).isNotNull();
+        assertThat(guardada.getEstado()).isEqualTo(EstadoCita.PENDIENTE);
+    }
+
+    @Test
+    void agendarCitaALas2001FallaConMensajeDeHorario() throws Exception {
+        registrarYLoguearCliente("horario.2001@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("horario.2001@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fechaFutura(2).withHour(20).withMinute(1));
+        cita.setMotivo("Un minuto tarde");
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> citaService.agendarCita(cita));
+        assertThat(ex.getMessage()).isEqualTo("El horario de atención es de 08:00 a 20:00");
+    }
+
+    @Test
+    void agendarCitaDentroDeLasProximas24HorasFallaConMensajeDeAnticipacion() throws Exception {
+        registrarYLoguearCliente("anticipacion.insuficiente@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("anticipacion.insuficiente@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        // A solo 5 horas vista: sin importar la hora del dia en que caiga, la
+        // validacion de anticipacion se evalua antes que la de horario (segun
+        // el orden documentado en CitaService.validarHorario), asi que este
+        // mensaje es siempre el que se lanza.
+        cita.setFechaHora(LocalDateTime.now().plusHours(5));
+        cita.setMotivo("Muy pronto");
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> citaService.agendarCita(cita));
+        assertThat(ex.getMessage()).isEqualTo("Las citas deben agendarse con al menos 24 horas de anticipación");
+    }
+
+    @Test
+    void agendarCitaConMasDe24HorasDeAnticipacionALas1000TieneExito() throws Exception {
+        registrarYLoguearCliente("anticipacion.suficiente@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("anticipacion.suficiente@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        // fechaFutura(2) deja siempre un margen minimo de ~34 horas (ver el
+        // comentario del helper), comodamente por encima de las 24 horas
+        // minimas exigidas.
+        LocalDateTime fecha = fechaFutura(2);
+        assertThat(java.time.Duration.between(LocalDateTime.now(), fecha).toHours()).isGreaterThanOrEqualTo(25);
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fecha);
+        cita.setMotivo("Con anticipacion suficiente");
+
+        Cita guardada = citaService.agendarCita(cita);
+        assertThat(guardada.getId()).isNotNull();
+    }
+
+    @Test
+    void agendarCitaUnDomingoDentroDelHorarioTieneExito() throws Exception {
+        registrarYLoguearCliente("domingo.atencion@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("domingo.atencion@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        LocalDateTime candidato = fechaFutura(2);
+        while (candidato.getDayOfWeek() != java.time.DayOfWeek.SUNDAY) {
+            candidato = candidato.plusDays(1);
+        }
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(candidato);
+        cita.setMotivo("Cita de domingo");
+
+        Cita guardada = citaService.agendarCita(cita);
+        assertThat(guardada.getFechaHora().getDayOfWeek()).isEqualTo(java.time.DayOfWeek.SUNDAY);
+        assertThat(guardada.getEstado()).isEqualTo(EstadoCita.PENDIENTE);
+    }
+
+    @Test
+    void reprogramarAUnaHoraFueraDelHorarioFalla() throws Exception {
+        registrarYLoguearCliente("reprograma.horario.invalido@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("reprograma.horario.invalido@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fechaFutura(2));
+        cita.setMotivo("Cita original");
+        Cita guardada = citaService.agendarCita(cita);
+
+        LocalDateTime fueraDeHorario = fechaFutura(3).withHour(21).withMinute(0);
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> citaService.reprogramarCita(guardada.getId(), fueraDeHorario));
+        assertThat(ex.getMessage()).isEqualTo("El horario de atención es de 08:00 a 20:00");
+
+        assertThat(citaRepository.findById(guardada.getId()).orElseThrow().getFechaHora())
+                .isEqualTo(guardada.getFechaHora());
+    }
+
+    @Test
+    void reprogramarAUnaHoraValidaConMasDe24HorasDeAnticipacionTieneExito() throws Exception {
+        registrarYLoguearCliente("reprograma.horario.valido@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("reprograma.horario.valido@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        Cita cita = new Cita();
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(fechaFutura(2));
+        cita.setMotivo("Cita original");
+        Cita guardada = citaService.agendarCita(cita);
+
+        LocalDateTime nuevaFecha = fechaFutura(4);
+        Cita reprogramada = citaService.reprogramarCita(guardada.getId(), nuevaFecha);
+        assertThat(reprogramada.getFechaHora()).isEqualTo(nuevaFecha);
+    }
+
+    @Test
+    void confirmarCancelarYAtenderFuncionanSobreCitasConFechaYaPasada() throws Exception {
+        registrarYLoguearCliente("cita.pasada@test.com");
+        Usuario cliente = usuarioRepository.findByEmail("cita.pasada@test.com").orElseThrow();
+        Mascota mascota = crearMascotaPara(cliente);
+        Usuario doctor = doctorSeed();
+
+        // Se crean directamente por repositorio, no via CitaService.agendarCita:
+        // la nueva validacion de horario/anticipacion es para AGENDAR y
+        // REPROGRAMAR (crear o mover una cita hacia un horario nuevo), no para
+        // gestionar citas que ya existen con fecha pasada. Es exactamente como
+        // el DataSeeder crea sus citas historicas de demostracion.
+        Cita citaPasada = new Cita();
+        citaPasada.setMascota(mascota);
+        citaPasada.setDoctor(doctor);
+        citaPasada.setFechaHora(LocalDateTime.now().minusDays(1).withHour(10).withMinute(0));
+        citaPasada.setMotivo("Cita historica a confirmar y cancelar");
+        citaPasada.setEstado(EstadoCita.PENDIENTE);
+        citaPasada.setFechaCreacion(LocalDateTime.now().minusDays(3));
+        citaPasada = citaRepository.save(citaPasada);
+
+        Cita confirmada = citaService.confirmarCita(citaPasada.getId());
+        assertThat(confirmada.getEstado()).isEqualTo(EstadoCita.CONFIRMADA);
+
+        Cita cancelada = citaService.cancelarCita(citaPasada.getId());
+        assertThat(cancelada.getEstado()).isEqualTo(EstadoCita.CANCELADA);
+
+        Cita otraCitaPasada = new Cita();
+        otraCitaPasada.setMascota(mascota);
+        otraCitaPasada.setDoctor(doctor);
+        otraCitaPasada.setFechaHora(LocalDateTime.now().minusHours(2));
+        otraCitaPasada.setMotivo("Cita historica a atender");
+        otraCitaPasada.setEstado(EstadoCita.PENDIENTE);
+        otraCitaPasada.setFechaCreacion(LocalDateTime.now().minusDays(2));
+        otraCitaPasada = citaRepository.save(otraCitaPasada);
+
+        MockHttpSession sesionDoctor = loguearComo("doctor@luaspets.com", "doctor123");
+        mvc().perform(post("/doctor/citas/{id}/atender", otraCitaPasada.getId()).with(csrf()).session(sesionDoctor)
+                        .param("diagnostico", "Revision retroactiva")
+                        .param("tratamiento", "Ninguno"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/doctor/citas?atendida"));
+
+        assertThat(citaRepository.findById(otraCitaPasada.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoCita.ATENDIDA);
     }
 }

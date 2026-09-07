@@ -25,7 +25,7 @@ import com.luaspets.util.ImagenUtil;
 public class CalendarioService {
 
     private static final int HORA_INICIO = 8;
-    private static final int HORA_FIN = 19;
+    private static final int HORA_FIN = 20;
 
     private static final DateTimeFormatter FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -34,11 +34,12 @@ public class CalendarioService {
             "agosto", "septiembre", "octubre", "noviembre", "diciembre" };
 
     /**
-     * Construye la rejilla semanal (lunes a domingo, franjas de 08:00 a 19:00)
-     * para el conjunto de citas dado, ya filtrado por semana dentro de este
-     * metodo. Es reutilizable para admin y doctor: el llamador decide que citas
-     * llegan (todas o solo las del doctor logueado) y como se genera la URL de
-     * cada tarjeta.
+     * Construye la rejilla semanal (lunes a domingo, franjas de 08:00 a 20:00,
+     * coincidiendo exactamente con el horario de atencion validado en
+     * CitaService) para el conjunto de citas dado, ya filtrado por semana
+     * dentro de este metodo. Es reutilizable para admin y doctor: el llamador
+     * decide que citas llegan (todas o solo las del doctor logueado) y como se
+     * genera la URL de cada tarjeta.
      */
     public SemanaCalendario construirSemana(List<Cita> citas, LocalDate lunesDeLaSemana,
             Function<Cita, String> generadorDeUrl) {
@@ -61,7 +62,7 @@ public class CalendarioService {
             int horaReal = fechaHora.getHour();
 
             // Las citas fuera del horario de atencion (antes de las 08:00 o despues
-            // de las 19:59) se "aplastan" a la primera o ultima fila visible del
+            // de las 20:00) se "aplastan" a la primera o ultima fila visible del
             // calendario en vez de exigir filas adicionales poco utiles para casos
             // excepcionales; se marcan con fueraDeRango para que la vista lo indique
             // con la hora real junto al nombre de la mascota.
@@ -77,6 +78,21 @@ public class CalendarioService {
 
         return new SemanaCalendario(lunes, domingo, construirTitulo(lunes, domingo),
                 lunes.minusWeeks(1).toString(), lunes.plusWeeks(1).toString(), dias, filas, citasEnSemana.size());
+    }
+
+    // Usado por AdminCitaController y DoctorCitaController para resolver el
+    // lunes de la semana visible en el calendario a partir del parametro
+    // "semana" (fecha ISO opcional en la URL): si no llega, o no se puede
+    // parsear, cae en la semana actual.
+    public LocalDate resolverLunes(String semana) {
+        if (semana != null && !semana.isBlank()) {
+            try {
+                return LocalDate.parse(semana).with(DayOfWeek.MONDAY);
+            } catch (Exception e) {
+                return LocalDate.now().with(DayOfWeek.MONDAY);
+            }
+        }
+        return LocalDate.now().with(DayOfWeek.MONDAY);
     }
 
     private List<DiaCalendario> construirDias(LocalDate lunes) {

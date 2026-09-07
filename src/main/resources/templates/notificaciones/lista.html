@@ -64,6 +64,8 @@
 
                 <span class="flex-shrink-0" style="font-size: 0.78rem; color: var(--lp-muted);" th:text="${n.tiempoRelativo}">Hace 5 minutos</span>
             </div>
+
+            <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/notificaciones', '', ${desde}, ${hasta})}"></div>
         </div>
     </div>
 </div>

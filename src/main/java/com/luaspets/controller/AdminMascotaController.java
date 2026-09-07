@@ -1,6 +1,8 @@
 package com.luaspets.controller;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -30,6 +32,7 @@ import com.luaspets.model.Mascota;
 import com.luaspets.repository.CitaRepository;
 import com.luaspets.repository.MascotaRepository;
 import com.luaspets.util.ImagenUtil;
+import com.luaspets.util.PaginacionUtil;
 
 @Controller
 @RequestMapping("/admin/mascotas")
@@ -79,6 +82,7 @@ public class AdminMascotaController {
 
         model.addAttribute("filas", filas);
         model.addAttribute("page", resultado);
+        model.addAttribute("numerosPagina", PaginacionUtil.numerosPagina(resultado));
         model.addAttribute("especies", mascotaRepository.findEspeciesDistintas());
         model.addAttribute("razas", mascotaRepository.findRazasDistintas());
         model.addAttribute("estados", EstadoMascota.values());
@@ -86,6 +90,8 @@ public class AdminMascotaController {
         model.addAttribute("especieSel", especieNorm);
         model.addAttribute("razaSel", razaNorm);
         model.addAttribute("estadoSel", estado);
+        model.addAttribute("hayFiltros", buscarNorm != null || especieNorm != null || razaNorm != null || estado != null);
+        model.addAttribute("queryFiltros", construirQueryFiltros(buscarNorm, especieNorm, razaNorm, estado));
 
         long total = resultado.getTotalElements();
         long desde = total == 0 ? 0 : (long) paginaSolicitada * TAMANIO_PAGINA + 1;
@@ -132,6 +138,23 @@ public class AdminMascotaController {
 
     private String normalizar(String valor) {
         return StringUtils.hasText(valor) ? valor.trim() : null;
+    }
+
+    private String construirQueryFiltros(String buscar, String especie, String raza, EstadoMascota estado) {
+        StringBuilder sb = new StringBuilder();
+        if (buscar != null) {
+            sb.append("&buscar=").append(URLEncoder.encode(buscar, StandardCharsets.UTF_8));
+        }
+        if (especie != null) {
+            sb.append("&especie=").append(URLEncoder.encode(especie, StandardCharsets.UTF_8));
+        }
+        if (raza != null) {
+            sb.append("&raza=").append(URLEncoder.encode(raza, StandardCharsets.UTF_8));
+        }
+        if (estado != null) {
+            sb.append("&estado=").append(estado.name());
+        }
+        return sb.toString();
     }
 
     private MascotaAdminRow mapearFila(Mascota mascota, LocalDateTime ultimaConsulta) {

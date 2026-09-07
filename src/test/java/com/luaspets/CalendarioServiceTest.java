@@ -55,7 +55,7 @@ class CalendarioServiceTest {
 
         SemanaCalendario semana = service.construirSemana(List.of(cita), lunes, c -> "/x/" + c.getId());
 
-        // Filas van de 08:00 (indice 0) a 19:00 (indice 11); 10:00 es el indice 2.
+        // Filas van de 08:00 (indice 0) a 20:00 (indice 12); 10:00 es el indice 2.
         FilaHora filaDiez = semana.getFilas().get(2);
         assertThat(filaDiez.getHoraTexto()).isEqualTo("10:00");
 
@@ -115,5 +115,47 @@ class CalendarioServiceTest {
         var citaColocada = primeraFila.getColumnas().get(0).get(0);
         assertThat(citaColocada.isFueraDeRango()).isTrue();
         assertThat(citaColocada.getHoraTexto()).isEqualTo("07:00");
+    }
+
+    @Test
+    void unaCitaDeLunesA2000CaeEnLaUltimaFilaYNoQuedaFueraDeRango() {
+        CalendarioService service = new CalendarioService();
+
+        LocalDate lunes = LocalDate.now().with(DayOfWeek.MONDAY);
+
+        Usuario cliente = new Usuario();
+        cliente.setNombre("Ana");
+        cliente.setApellido("Torres");
+
+        Mascota mascota = new Mascota();
+        mascota.setNombre("Rocky");
+        mascota.setEspecie("Perro");
+        mascota.setRaza("Labrador");
+        mascota.setCliente(cliente);
+
+        Usuario doctor = new Usuario();
+        doctor.setNombre("Carlos");
+        doctor.setApellido("Mendoza");
+
+        Cita cita = new Cita();
+        cita.setId(3L);
+        cita.setMascota(mascota);
+        cita.setDoctor(doctor);
+        cita.setFechaHora(LocalDateTime.of(lunes, LocalTime.of(20, 0)));
+        cita.setMotivo("Ultima cita del dia");
+        cita.setEstado(EstadoCita.PENDIENTE);
+
+        SemanaCalendario semana = service.construirSemana(List.of(cita), lunes, c -> "/x/" + c.getId());
+
+        // Ahora que el horario de atencion llega hasta las 20:00, la rejilla debe
+        // tener 13 filas (08:00 a 20:00) y la ultima cita del dia no debe quedar
+        // marcada como fuera de rango.
+        assertThat(semana.getFilas()).hasSize(13);
+        FilaHora ultimaFila = semana.getFilas().get(12);
+        assertThat(ultimaFila.getHoraTexto()).isEqualTo("20:00");
+
+        var citaColocada = ultimaFila.getColumnas().get(0).get(0);
+        assertThat(citaColocada.isFueraDeRango()).isFalse();
+        assertThat(citaColocada.getHoraTexto()).isEqualTo("20:00");
     }
 }

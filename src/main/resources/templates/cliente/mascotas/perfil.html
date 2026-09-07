@@ -36,6 +36,10 @@
                     <a th:href="@{/cliente/citas/nueva}" class="lp-btn-primary text-center w-100 w-sm-auto">
                         <i class="bi bi-calendar-plus me-1"></i>Agendar cita
                     </a>
+                    <a th:href="@{/cliente/mascotas/{id}/expediente.pdf(id=${expediente.id})}"
+                        class="lp-btn-outline text-center w-100 w-sm-auto">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Descargar expediente
+                    </a>
                     <a th:href="@{/cliente/mascotas}" class="lp-btn-outline text-center w-100 w-sm-auto">
                         <i class="bi bi-arrow-left me-1"></i>Volver
                     </a>

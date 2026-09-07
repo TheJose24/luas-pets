@@ -9,5 +9,6 @@ public enum TipoNotificacion {
     PEDIDO_ESTADO,
     PEDIDO_NUEVO,
     CLIENTE_NUEVO,
-    STOCK_BAJO
+    STOCK_BAJO,
+    CITA_RECORDATORIO
 }

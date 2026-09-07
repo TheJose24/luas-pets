@@ -63,11 +63,11 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
                                     <input type="datetime-local" class="form-control" id="fechaHora" name="fechaHora"
-                                        th:min="${minFechaHora}"
+                                        th:min="${minFechaHora}" th:max="${maxFechaHora}"
                                         required />
-                                    <div class="invalid-feedback">Selecciona una fecha y hora válida (no puede ser en el pasado)</div>
+                                    <div class="invalid-feedback" id="fechaHoraFeedback">Selecciona una fecha y hora válida (no puede ser en el pasado)</div>
                                 </div>
-                                <div class="form-text">Selecciona fecha y hora. El horario de atención es de 8:00 a 20:00.</div>
+                                <div class="form-text">Atendemos todos los días de 08:00 a 20:00. Las citas se agendan con un mínimo de 24 horas de anticipación.</div>
                             </div>
                             <div class="col-12">
                                 <label for="motivo" class="form-label fw-medium">Motivo</label>
@@ -92,5 +92,44 @@
 </div>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    (function () {
+        var HORA_APERTURA_MIN = 8 * 60;
+        var HORA_CIERRE_MIN = 20 * 60;
+
+        var form = document.querySelector('form.needs-validation');
+        var fechaHora = document.getElementById('fechaHora');
+        var feedback = document.getElementById('fechaHoraFeedback');
+        if (!form || !fechaHora || !feedback) return;
+
+        function horaEnRango() {
+            if (!fechaHora.value) return true;
+            var partes = fechaHora.value.split('T');
+            if (partes.length < 2) return true;
+            var horaMin = partes[1].split(':');
+            var minutosDelDia = parseInt(horaMin[0], 10) * 60 + parseInt(horaMin[1], 10);
+            return minutosDelDia >= HORA_APERTURA_MIN && minutosDelDia <= HORA_CIERRE_MIN;
+        }
+
+        function validarHora() {
+            if (horaEnRango()) {
+                fechaHora.classList.remove('is-invalid');
+                feedback.textContent = 'Selecciona una fecha y hora válida (no puede ser en el pasado)';
+            } else {
+                fechaHora.classList.add('is-invalid');
+                feedback.textContent = 'La hora debe estar entre las 08:00 y las 20:00.';
+            }
+        }
+
+        fechaHora.addEventListener('input', validarHora);
+        form.addEventListener('submit', function (event) {
+            if (!horaEnRango()) {
+                event.preventDefault();
+                event.stopPropagation();
+                validarHora();
+            }
+        });
+    })();
+</script>
 </body>
 </html>

@@ -19,6 +19,17 @@ public interface MascotaRepository extends JpaRepository<Mascota, Long> {
 
     List<Mascota> findByClienteId(Long clienteId);
 
+    // Dashboard del cliente: reemplaza mascotaService.listarPorCliente(...).size().
+    long countByClienteId(Long clienteId);
+
+    // Dashboard del cliente: la vista solo muestra las 2 primeras mascotas en
+    // la tarjeta de resumen (el resto se ve en /cliente/mascotas). Se ordena
+    // explicitamente por id ascendente para que el resultado sea deterministico
+    // (antes se usaba findByClienteId sin ORDER BY, cuyo orden no estaba
+    // garantizado por JPA aunque en la practica H2/MySQL devolvian las filas en
+    // orden de insercion).
+    List<Mascota> findTop2ByClienteIdOrderById(Long clienteId);
+
     @EntityGraph(attributePaths = {"cliente"})
     Optional<Mascota> findWithClienteById(Long id);
 

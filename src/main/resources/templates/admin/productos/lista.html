@@ -29,13 +29,49 @@
             <i class="bi bi-check-circle"></i> Producto actualizado correctamente
         </div>
 
+        <div class="lp-card p-3 mb-4">
+            <form th:action="@{/admin/productos}" method="get" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="lp-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" name="buscar" placeholder="Buscar por nombre de producto..." th:value="${buscar}" />
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select class="form-select" name="categoria" onchange="this.form.submit()">
+                        <option value="">Todas las categorías</option>
+                        <option th:each="c : ${categorias}" th:value="${c}" th:text="${c}" th:selected="${c == categoriaSel}"></option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select class="form-select" name="activo" onchange="this.form.submit()">
+                        <option value="" th:selected="${activoSel == null}">Todos</option>
+                        <option value="true" th:selected="${activoSel != null and activoSel}">Activos</option>
+                        <option value="false" th:selected="${activoSel != null and !activoSel}">Inactivos</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2 d-flex gap-2">
+                    <button type="submit" class="lp-btn-primary flex-shrink-0">Filtrar</button>
+                    <a th:href="@{/admin/productos}" class="lp-btn-outline flex-shrink-0" title="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <div th:if="${#lists.isEmpty(productos)}" class="lp-card lp-empty-state">
             <i class="bi bi-box-seam"></i>
-            <h5 class="fw-bold mb-1">No hay productos registrados</h5>
-            <p class="mb-3">Agrega el primer producto del catálogo.</p>
-            <a th:href="@{/admin/productos/nuevo}" class="lp-btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Agregar producto
-            </a>
+            <div th:if="${hayFiltros}">
+                <h5 class="fw-bold mb-1">No se encontraron productos con esos criterios.</h5>
+                <a th:href="@{/admin/productos}" class="lp-btn-primary mt-2">Limpiar filtros</a>
+            </div>
+            <div th:unless="${hayFiltros}">
+                <h5 class="fw-bold mb-1">No hay productos registrados</h5>
+                <p class="mb-3">Agrega el primer producto del catálogo.</p>
+                <a th:href="@{/admin/productos/nuevo}" class="lp-btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Agregar producto
+                </a>
+            </div>
         </div>
 
         <div class="lp-card p-0" th:unless="${#lists.isEmpty(productos)}">
@@ -112,6 +148,8 @@
                     </tbody>
                 </table>
             </div>
+
+            <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/admin/productos', ${queryFiltros}, ${desde}, ${hasta})}"></div>
         </div>
     </div>
 </div>

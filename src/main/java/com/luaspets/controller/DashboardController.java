@@ -7,8 +7,11 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -25,37 +28,43 @@ import com.luaspets.model.Mascota;
 import com.luaspets.model.Pedido;
 import com.luaspets.model.Producto;
 import com.luaspets.model.Rol;
-import com.luaspets.model.Usuario;
+import com.luaspets.repository.CitaRepository;
 import com.luaspets.repository.MascotaRepository;
+import com.luaspets.repository.PedidoRepository;
+import com.luaspets.repository.ProductoRepository;
+import com.luaspets.repository.UsuarioRepository;
 import com.luaspets.security.CustomUserDetails;
-import com.luaspets.service.CitaService;
-import com.luaspets.service.MascotaService;
-import com.luaspets.service.PedidoService;
-import com.luaspets.service.ProductoService;
-import com.luaspets.service.UsuarioService;
 
+/**
+ * Los tres dashboards se resuelven con conteos y listados acotados en la base
+ * de datos (ver los repositorios), no cargando tablas completas y calculando
+ * con streams en memoria: en un plan de 512MB de RAM (heap de 350MB) y con
+ * open-in-view=false, cargar el historial completo de citas/pedidos/productos
+ * en cada visita al dashboard escalaba con el tamano total de esas tablas, no
+ * con lo que la vista realmente muestra.
+ */
 @Controller
 public class DashboardController {
 
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final String[] MESES = { "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct",
             "Nov", "Dic" };
+    private static final List<EstadoCita> ESTADOS_ACTIVOS = List.of(EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA);
+    private static final int UMBRAL_STOCK_BAJO = 10;
 
-    private final UsuarioService usuarioService;
-    private final CitaService citaService;
-    private final ProductoService productoService;
-    private final PedidoService pedidoService;
-    private final MascotaService mascotaService;
+    private final UsuarioRepository usuarioRepository;
+    private final CitaRepository citaRepository;
+    private final ProductoRepository productoRepository;
+    private final PedidoRepository pedidoRepository;
     private final MascotaRepository mascotaRepository;
 
-    public DashboardController(UsuarioService usuarioService, CitaService citaService,
-            ProductoService productoService, PedidoService pedidoService, MascotaService mascotaService,
+    public DashboardController(UsuarioRepository usuarioRepository, CitaRepository citaRepository,
+            ProductoRepository productoRepository, PedidoRepository pedidoRepository,
             MascotaRepository mascotaRepository) {
-        this.usuarioService = usuarioService;
-        this.citaService = citaService;
-        this.productoService = productoService;
-        this.pedidoService = pedidoService;
-        this.mascotaService = mascotaService;
+        this.usuarioRepository = usuarioRepository;
+        this.citaRepository = citaRepository;
+        this.productoRepository = productoRepository;
+        this.pedidoRepository = pedidoRepository;
         this.mascotaRepository = mascotaRepository;
     }
 
@@ -64,28 +73,31 @@ public class DashboardController {
         Long clienteId = userDetails.getUsuario().getId();
         model.addAttribute("usuario", userDetails.getUsuario());
 
-        List<Mascota> mascotas = mascotaService.listarPorCliente(clienteId);
-        model.addAttribute("mascotas", mascotas);
-        model.addAttribute("totalMascotas", mascotas.size());
-
-        List<Cita> citas = citaService.listarPorCliente(clienteId);
-        model.addAttribute("citas", citas);
+        // La tarjeta de resumen solo muestra las 2 primeras mascotas (el resto
+        // se ve en /cliente/mascotas); totalMascotas es un conteo aparte, no
+        // mascotas.size(), para no tener que traer todas las filas solo para
+        // contarlas.
+        model.addAttribute("mascotas", mascotaRepository.findTop2ByClienteIdOrderById(clienteId));
+        model.addAttribute("totalMascotas", mascotaRepository.countByClienteId(clienteId));
 
         LocalDateTime ahora = LocalDateTime.now();
-        List<Cita> citasFuturasActivas = citas.stream()
-                .filter(c -> (c.getEstado() == EstadoCita.PENDIENTE || c.getEstado() == EstadoCita.CONFIRMADA)
-                        && c.getFechaHora().isAfter(ahora))
-                .toList();
-        model.addAttribute("citasProximas", citasFuturasActivas.size());
-        model.addAttribute("proximaCita",
-                citasFuturasActivas.stream().min(Comparator.comparing(Cita::getFechaHora)).orElse(null));
+
+        model.addAttribute("citasProximas", citaRepository
+                .countByMascotaClienteIdAndEstadoInAndFechaHoraAfter(clienteId, ESTADOS_ACTIVOS, ahora));
+        model.addAttribute("proximaCita", citaRepository
+                .findFirstByMascotaClienteIdAndEstadoInAndFechaHoraAfterOrderByFechaHoraAsc(clienteId,
+                        ESTADOS_ACTIVOS, ahora)
+                .orElse(null));
 
         model.addAttribute("citasPendientes",
-                citas.stream().filter(c -> c.getEstado() == EstadoCita.PENDIENTE).count());
+                citaRepository.countByMascotaClienteIdAndEstado(clienteId, EstadoCita.PENDIENTE));
 
-        model.addAttribute("totalPedidos", pedidoService.listarPorCliente(clienteId).size());
+        model.addAttribute("totalPedidos", pedidoRepository.countByClienteId(clienteId));
 
-        model.addAttribute("actividadReciente", citas.stream().limit(4).toList());
+        // Igual que antes (.limit(4) sobre las citas del cliente ordenadas por
+        // fecha descendente), pero acotado directamente en la consulta.
+        model.addAttribute("actividadReciente",
+                citaRepository.findTop4ByMascotaClienteIdOrderByFechaHoraDesc(clienteId));
 
         return "cliente/dashboard";
     }
@@ -94,46 +106,41 @@ public class DashboardController {
     public String doctorDashboard(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         Long doctorId = userDetails.getUsuario().getId();
         model.addAttribute("usuario", userDetails.getUsuario());
-
         model.addAttribute("saludo", saludoSegunHora());
 
-        List<Cita> citas = citaService.listarPorDoctor(doctorId);
         LocalDateTime ahora = LocalDateTime.now();
         LocalDate hoy = ahora.toLocalDate();
+        LocalDateTime inicioHoy = LocalDateTime.of(hoy, LocalTime.MIN);
+        LocalDateTime finHoy = LocalDateTime.of(hoy, LocalTime.of(23, 59, 59));
 
-        List<Cita> citasHoy = citas.stream()
-                .filter(c -> c.getFechaHora().toLocalDate().equals(hoy))
-                .sorted(Comparator.comparing(Cita::getFechaHora))
-                .toList();
+        List<Cita> citasHoy = citaRepository.findByDoctorIdAndFechaHoraBetweenOrderByFechaHoraAsc(doctorId,
+                inicioHoy, finHoy);
         model.addAttribute("citasHoy", citasHoy);
         model.addAttribute("totalCitasHoy", citasHoy.size());
 
-        model.addAttribute("citasAtendidas",
-                citas.stream().filter(c -> c.getEstado() == EstadoCita.ATENDIDA).count());
+        model.addAttribute("citasAtendidas", citaRepository.countByDoctorIdAndEstado(doctorId, EstadoCita.ATENDIDA));
         model.addAttribute("citasPendientes",
-                citas.stream()
-                        .filter(c -> c.getEstado() == EstadoCita.PENDIENTE || c.getEstado() == EstadoCita.CONFIRMADA)
-                        .count());
-        model.addAttribute("totalCitas", citas.size());
+                citaRepository.countByDoctorIdAndEstadoIn(doctorId, ESTADOS_ACTIVOS));
+        model.addAttribute("totalCitas", citaRepository.countByDoctorId(doctorId));
 
-        Cita proximaCita = citas.stream()
-                .filter(c -> (c.getEstado() == EstadoCita.PENDIENTE || c.getEstado() == EstadoCita.CONFIRMADA)
-                        && c.getFechaHora().isAfter(ahora))
-                .min(Comparator.comparing(Cita::getFechaHora))
-                .orElse(null);
-        model.addAttribute("proximaCita", proximaCita);
+        model.addAttribute("proximaCita", citaRepository
+                .findFirstByDoctorIdAndEstadoInAndFechaHoraAfterOrderByFechaHoraAsc(doctorId, ESTADOS_ACTIVOS, ahora)
+                .orElse(null));
 
-        List<Cita> citasVencidas = citas.stream()
-                .filter(c -> (c.getEstado() == EstadoCita.PENDIENTE || c.getEstado() == EstadoCita.CONFIRMADA)
-                        && c.getFechaHora().isBefore(ahora))
-                .sorted(Comparator.comparing(Cita::getFechaHora))
-                .limit(5)
-                .toList();
-        model.addAttribute("citasVencidas", citasVencidas);
+        model.addAttribute("citasVencidas", citaRepository
+                .findTop5ByDoctorIdAndEstadoInAndFechaHoraBeforeOrderByFechaHoraAsc(doctorId, ESTADOS_ACTIVOS,
+                        ahora));
 
+        // No existe una consulta JPQL directa y simple para "las 5 mascotas
+        // distintas mas recientes"; se trae un lote acotado (las 20 citas mas
+        // recientes del doctor, no su historial completo) y el distinct se
+        // hace en memoria sobre ese lote, documentado tambien en el
+        // repositorio. Limitacion aceptada: si el doctor atendio repetidamente
+        // a los mismos pocos pacientes en sus ultimas 20 citas, esta version
+        // podria devolver menos de 5 pacientes distintos aunque existan mas
+        // en su historial completo.
         Set<Long> mascotasVistas = new HashSet<>();
-        List<Mascota> pacientesRecientes = citas.stream()
-                .sorted(Comparator.comparing(Cita::getFechaHora).reversed())
+        List<Mascota> pacientesRecientes = citaRepository.findTop20ByDoctorIdOrderByFechaHoraDesc(doctorId).stream()
                 .map(Cita::getMascota)
                 .filter(m -> mascotasVistas.add(m.getId()))
                 .limit(5)
@@ -148,48 +155,63 @@ public class DashboardController {
         model.addAttribute("usuario", userDetails.getUsuario());
         model.addAttribute("saludo", saludoSegunHora());
 
-        List<Usuario> clientes = usuarioService.listarPorRol(Rol.CLIENTE);
-        List<Usuario> doctoresTodos = usuarioService.listarPorRol(Rol.DOCTOR);
-        List<Usuario> admins = usuarioService.listarPorRol(Rol.ADMIN);
-        int totalDoctoresActivos = usuarioService.listarDoctoresActivos().size();
-        int totalUsuarios = clientes.size() + doctoresTodos.size() + admins.size();
+        // Una sola consulta GROUP BY para los tres conteos por rol, en vez de
+        // tres countByRol separados: la tabla de usuarios es pequena y el
+        // dashboard ya necesita los tres conteos en la misma peticion. OJO: un
+        // rol sin usuarios no aparece en el resultado (GROUP BY no genera
+        // filas con conteo cero), por eso el mapa se inicializa en 0 para los
+        // tres roles antes de volcar el resultado real.
+        Map<Rol, Long> conteoPorRol = new EnumMap<>(Rol.class);
+        for (Rol rol : Rol.values()) {
+            conteoPorRol.put(rol, 0L);
+        }
+        for (Object[] fila : usuarioRepository.contarPorRol()) {
+            conteoPorRol.put((Rol) fila[0], (Long) fila[1]);
+        }
+        long totalClientes = conteoPorRol.get(Rol.CLIENTE);
+        long totalDoctoresTodos = conteoPorRol.get(Rol.DOCTOR);
+        long totalAdmins = conteoPorRol.get(Rol.ADMIN);
+        long totalUsuarios = totalClientes + totalDoctoresTodos + totalAdmins;
 
-        model.addAttribute("totalUsuarios", totalUsuarios);
-        model.addAttribute("totalClientes", clientes.size());
-        model.addAttribute("totalDoctores", totalDoctoresActivos);
-        model.addAttribute("totalAdmins", admins.size());
+        model.addAttribute("totalUsuarios", (int) totalUsuarios);
+        model.addAttribute("totalClientes", (int) totalClientes);
+        model.addAttribute("totalDoctores", (int) usuarioRepository.countByRolAndActivoTrue(Rol.DOCTOR));
+        model.addAttribute("totalAdmins", (int) totalAdmins);
         model.addAttribute("totalMascotas", mascotaRepository.count());
 
-        model.addAttribute("pctClientes", porcentaje(clientes.size(), totalUsuarios));
-        model.addAttribute("pctDoctores", porcentaje(doctoresTodos.size(), totalUsuarios));
-        model.addAttribute("pctAdmins", porcentaje(admins.size(), totalUsuarios));
-
-        List<Cita> citas = citaService.listarTodas();
-        List<Producto> productos = productoService.listarActivos();
-        List<Pedido> pedidos = pedidoService.listarTodos();
+        model.addAttribute("pctClientes", porcentaje(totalClientes, totalUsuarios));
+        model.addAttribute("pctDoctores", porcentaje(totalDoctoresTodos, totalUsuarios));
+        model.addAttribute("pctAdmins", porcentaje(totalAdmins, totalUsuarios));
 
         LocalDateTime ahora = LocalDateTime.now();
         LocalDate hoy = ahora.toLocalDate();
+        LocalDateTime inicioHoy = LocalDateTime.of(hoy, LocalTime.MIN);
+        LocalDateTime finHoy = LocalDateTime.of(hoy, LocalTime.of(23, 59, 59));
         YearMonth mesActual = YearMonth.now();
+        LocalDateTime inicioMes = LocalDateTime.of(mesActual.atDay(1), LocalTime.MIN);
+        LocalDateTime finMes = LocalDateTime.of(mesActual.atEndOfMonth(), LocalTime.of(23, 59, 59));
 
-        model.addAttribute("citasPendientes",
-                citas.stream().filter(c -> c.getEstado() == EstadoCita.PENDIENTE).count());
-        model.addAttribute("citasAtendidas",
-                citas.stream().filter(c -> c.getEstado() == EstadoCita.ATENDIDA).count());
-        model.addAttribute("totalProductos", productos.size());
-        model.addAttribute("pedidosPendientes",
-                pedidos.stream().filter(p -> p.getEstado() == EstadoPedido.PENDIENTE).count());
+        // citasPendientes/citasAtendidas (globales, sin filtro de fecha) y
+        // totalProductos/pedidosPendientes: no los usa admin/dashboard.html hoy,
+        // pero seguian siendo atributos del Model antes de este refactor y las
+        // restricciones piden no cambiar ningun valor, se use o no en la vista.
+        model.addAttribute("citasPendientes", citaRepository.countByEstado(EstadoCita.PENDIENTE));
+        model.addAttribute("citasAtendidas", citaRepository.countByEstado(EstadoCita.ATENDIDA));
+        model.addAttribute("totalProductos", (int) productoRepository.countByActivoTrue());
+        model.addAttribute("pedidosPendientes", pedidoRepository.countByEstado(EstadoPedido.PENDIENTE));
 
-        model.addAttribute("citasDelMes",
-                citas.stream().filter(c -> YearMonth.from(c.getFechaHora()).equals(mesActual)).count());
+        model.addAttribute("citasDelMes", citaRepository.countByFechaHoraBetween(inicioMes, finMes));
 
-        List<Cita> citasHoy = citas.stream().filter(c -> c.getFechaHora().toLocalDate().equals(hoy)).toList();
-        long citasHoyTotal = citasHoy.size();
-        long citasHoyAtendidas = citasHoy.stream().filter(c -> c.getEstado() == EstadoCita.ATENDIDA).count();
-        long citasHoyPendientes = citasHoy.stream().filter(c -> c.getEstado() == EstadoCita.PENDIENTE).count();
-        long citasHoyConfirmadas = citasHoy.stream().filter(c -> c.getEstado() == EstadoCita.CONFIRMADA).count();
-        long citasHoyCanceladas = citasHoy.stream().filter(c -> c.getEstado() == EstadoCita.CANCELADA).count();
-        model.addAttribute("citasHoyTotal", citasHoyTotal);
+        long citasHoyTotal = citaRepository.countByFechaHoraBetween(inicioHoy, finHoy);
+        long citasHoyAtendidas = citaRepository.countByFechaHoraBetweenAndEstado(inicioHoy, finHoy,
+                EstadoCita.ATENDIDA);
+        long citasHoyPendientes = citaRepository.countByFechaHoraBetweenAndEstado(inicioHoy, finHoy,
+                EstadoCita.PENDIENTE);
+        long citasHoyConfirmadas = citaRepository.countByFechaHoraBetweenAndEstado(inicioHoy, finHoy,
+                EstadoCita.CONFIRMADA);
+        long citasHoyCanceladas = citaRepository.countByFechaHoraBetweenAndEstado(inicioHoy, finHoy,
+                EstadoCita.CANCELADA);
+        model.addAttribute("citasHoyTotal", (int) citasHoyTotal);
         model.addAttribute("citasHoyAtendidas", citasHoyAtendidas);
         model.addAttribute("citasHoyPendientes", citasHoyPendientes);
         model.addAttribute("citasHoyConfirmadas", citasHoyConfirmadas);
@@ -199,25 +221,16 @@ public class DashboardController {
         model.addAttribute("pctHoyConfirmadas", porcentaje(citasHoyConfirmadas, citasHoyTotal));
         model.addAttribute("pctHoyCanceladas", porcentaje(citasHoyCanceladas, citasHoyTotal));
 
-        List<Producto> productosStockBajo = productos.stream()
-                .filter(p -> p.getStock() < 10)
-                .sorted(Comparator.comparing(Producto::getStock))
-                .limit(5)
-                .toList();
+        List<Producto> productosStockBajo = productoRepository
+                .findTop5ByActivoTrueAndStockLessThanOrderByStockAsc(UMBRAL_STOCK_BAJO);
         model.addAttribute("productosStockBajo", productosStockBajo);
 
-        List<Cita> citasVencidas = citas.stream()
-                .filter(c -> (c.getEstado() == EstadoCita.PENDIENTE || c.getEstado() == EstadoCita.CONFIRMADA)
-                        && c.getFechaHora().isBefore(ahora))
-                .sorted(Comparator.comparing(Cita::getFechaHora))
-                .limit(5)
-                .toList();
+        List<Cita> citasVencidas = citaRepository.findTop5ByEstadoInAndFechaHoraBeforeOrderByFechaHoraAsc(
+                ESTADOS_ACTIVOS, ahora);
         model.addAttribute("citasVencidas", citasVencidas);
 
-        List<Pedido> pedidosPendientesLista = pedidos.stream()
-                .filter(p -> p.getEstado() == EstadoPedido.PENDIENTE)
-                .limit(5)
-                .toList();
+        List<Pedido> pedidosPendientesLista = pedidoRepository.findTop5ByEstadoOrderByFechaDesc(
+                EstadoPedido.PENDIENTE);
         model.addAttribute("pedidosPendientesLista", pedidosPendientesLista);
 
         model.addAttribute("totalAlertas",
@@ -226,28 +239,40 @@ public class DashboardController {
         List<String> chartLabels = new ArrayList<>();
         List<Long> chartAtendidas = new ArrayList<>();
         List<Long> chartTotales = new ArrayList<>();
+        // Consulta agregada unica para los 6 meses del grafico (antes: recorrer
+        // TODAS las citas del sistema y contarlas mes a mes en memoria). El mes
+        // mas antiguo del rango, mesActual.minusMonths(5), es el limite inferior
+        // de la consulta.
+        LocalDateTime desdeGrafico = LocalDateTime.of(mesActual.minusMonths(5).atDay(1), LocalTime.MIN);
+        Map<YearMonth, long[]> conteoPorMes = new HashMap<>();
+        for (Object[] fila : citaRepository.contarCitasPorMesDesde(desdeGrafico, EstadoCita.ATENDIDA)) {
+            int anio = ((Number) fila[0]).intValue();
+            int mesNumero = ((Number) fila[1]).intValue();
+            long total = ((Number) fila[2]).longValue();
+            long atendidas = ((Number) fila[3]).longValue();
+            conteoPorMes.put(YearMonth.of(anio, mesNumero), new long[] { total, atendidas });
+        }
         for (int i = 5; i >= 0; i--) {
             YearMonth mes = mesActual.minusMonths(i);
             chartLabels.add(MESES[mes.getMonthValue() - 1]);
-            chartAtendidas.add(citas.stream()
-                    .filter(c -> c.getEstado() == EstadoCita.ATENDIDA && YearMonth.from(c.getFechaHora()).equals(mes))
-                    .count());
-            chartTotales.add(citas.stream()
-                    .filter(c -> YearMonth.from(c.getFechaHora()).equals(mes))
-                    .count());
+            // Un mes sin ninguna cita simplemente no aparece en el resultado de
+            // la consulta GROUP BY: si no esta en el mapa, su valor es 0, no se
+            // omite del grafico.
+            long[] conteo = conteoPorMes.getOrDefault(mes, new long[] { 0L, 0L });
+            chartTotales.add(conteo[0]);
+            chartAtendidas.add(conteo[1]);
         }
         model.addAttribute("chartLabels", jsonStringArray(chartLabels));
         model.addAttribute("chartCitasAtendidas", jsonNumberArray(chartAtendidas));
         model.addAttribute("chartCitasTotales", jsonNumberArray(chartTotales));
 
-        List<Usuario> todosUsuarios = new ArrayList<>();
-        todosUsuarios.addAll(clientes);
-        todosUsuarios.addAll(doctoresTodos);
-        todosUsuarios.addAll(admins);
-
-        List<ActividadItem> actUsuarios = todosUsuarios.stream()
-                .sorted(Comparator.comparing(Usuario::getFechaRegistro).reversed())
-                .limit(8)
+        // Actividad reciente: 5 fuentes acotadas (8 de cada una, 40 objetos como
+        // maximo) en vez de las tablas completas de usuarios/citas/pedidos.
+        // Se trae 8 de CADA fuente, no menos, porque cualquiera de las cinco
+        // podria aportar los 8 elementos que terminan en el top 8 final una vez
+        // combinadas y reordenadas por fecha: traer menos arriesgaria perder
+        // registros que si deberian aparecer.
+        List<ActividadItem> actUsuarios = usuarioRepository.findTop8ByOrderByFechaRegistroDesc().stream()
                 .map(u -> new ActividadItem("bi-person-plus", "info",
                         u.getNombre() + " " + u.getApellido() + " se registró como "
                                 + u.getRol().name().toLowerCase(),
@@ -255,38 +280,30 @@ public class DashboardController {
                         "Registro", u.getFechaRegistro()))
                 .toList();
 
-        List<ActividadItem> actCitasCreadas = citas.stream()
-                .sorted(Comparator.comparing(Cita::getFechaCreacion).reversed())
-                .limit(8)
+        List<ActividadItem> actCitasCreadas = citaRepository.findTop8ByOrderByFechaCreacionDesc().stream()
                 .map(c -> new ActividadItem("bi-calendar-plus", "primary",
                         "Se agendó una cita para " + c.getMascota().getNombre(),
                         "Cita programada para el " + c.getFechaHora().format(FORMATO_FECHA),
                         "Cita", c.getFechaCreacion()))
                 .toList();
 
-        List<ActividadItem> actAtendidas = citas.stream()
-                .filter(c -> c.getEstado() == EstadoCita.ATENDIDA)
-                .sorted(Comparator.comparing(Cita::getFechaHora).reversed())
-                .limit(8)
+        List<ActividadItem> actAtendidas = citaRepository.findTop8ByEstadoOrderByFechaHoraDesc(EstadoCita.ATENDIDA)
+                .stream()
                 .map(c -> new ActividadItem("bi-clipboard-check", "primary",
                         "Dr. " + c.getDoctor().getNombre() + " atendió a " + c.getMascota().getNombre(),
                         "Atendida el " + c.getFechaHora().format(FORMATO_FECHA),
                         "Atendida", c.getFechaHora()))
                 .toList();
 
-        List<ActividadItem> actCanceladas = citas.stream()
-                .filter(c -> c.getEstado() == EstadoCita.CANCELADA)
-                .sorted(Comparator.comparing(Cita::getFechaHora).reversed())
-                .limit(8)
+        List<ActividadItem> actCanceladas = citaRepository.findTop8ByEstadoOrderByFechaHoraDesc(EstadoCita.CANCELADA)
+                .stream()
                 .map(c -> new ActividadItem("bi-calendar-x", "danger",
                         "Se canceló la cita de " + c.getMascota().getNombre(),
                         "Estaba programada para el " + c.getFechaHora().format(FORMATO_FECHA),
                         "Cancelada", c.getFechaHora()))
                 .toList();
 
-        List<ActividadItem> actPedidos = pedidos.stream()
-                .sorted(Comparator.comparing(Pedido::getFecha).reversed())
-                .limit(8)
+        List<ActividadItem> actPedidos = pedidoRepository.findTop8ByOrderByFechaDesc().stream()
                 .map(p -> new ActividadItem("bi-bag-check", "warning",
                         p.getCliente().getNombre() + " realizó un pedido",
                         String.format("Total: S/ %.2f", p.getTotal()),

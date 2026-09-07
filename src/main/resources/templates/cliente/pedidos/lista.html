@@ -55,7 +55,7 @@
                         <tr th:each="pedido : ${pedidos}">
                             <td class="fw-semibold" th:text="${pedido.id}">1</td>
                             <td th:text="${#temporals.format(pedido.fecha, 'dd/MM/yyyy HH:mm')}">Fecha</td>
-                            <td th:text="${#lists.size(pedido.detalles)}">0</td>
+                            <td th:text="${cantidadPorPedido.get(pedido.id)} ?: 0">0</td>
                             <td th:text="'S/ ' + ${#numbers.formatDecimal(pedido.total, 1, 2)}">S/ 0.00</td>
                             <td>
                                 <span class="lp-badge"
@@ -73,6 +73,8 @@
                     </tbody>
                 </table>
             </div>
+
+            <div th:replace="~{fragments/paginacion :: controles(${page}, ${numerosPagina}, '/cliente/pedidos', '', ${desde}, ${hasta})}"></div>
         </div>
     </div>
 </div>

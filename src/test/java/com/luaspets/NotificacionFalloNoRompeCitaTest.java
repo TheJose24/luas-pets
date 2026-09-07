@@ -101,7 +101,13 @@ class NotificacionFalloNoRompeCitaTest {
         mascota = mascotaRepository.save(mascota);
 
         Usuario doctor = usuarioRepository.findByEmail("doctor@luaspets.com").orElseThrow();
-        String fecha = LocalDateTime.now().plusDays(1).format(FORMAT);
+        // Se fija la hora a las 14:00 (no 10:00, para no chocar con la cita que
+        // DataSeeder siembra para doctor@luaspets.com en dia+3 a las 10:00) y se
+        // piden 2 dias de adelanto para quedar comodamente dentro del horario de
+        // atencion (08:00-20:00) y muy por encima del minimo de 24 horas de
+        // anticipacion, sin importar a que hora corra la suite.
+        String fecha = LocalDateTime.now().plusDays(2).withHour(14).withMinute(0).withSecond(0).withNano(0)
+                .format(FORMAT);
 
         // El agendamiento no debe fallar aunque el mock de NotificacionService
         // lance una excepcion en cada llamada a crear(...); CitaService la

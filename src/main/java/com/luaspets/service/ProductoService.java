@@ -26,10 +26,6 @@ public class ProductoService {
         return productoRepository.findCategoriasActivas();
     }
 
-    public List<Producto> listarTodos() {
-        return productoRepository.findAll();
-    }
-
     public Producto buscarPorId(Long id) {
         return productoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
@@ -38,13 +34,6 @@ public class ProductoService {
     @Transactional
     public Producto crearProducto(Producto producto) {
         producto.setActivo(true);
-        return productoRepository.save(producto);
-    }
-
-    @Transactional
-    public Producto actualizarStock(Long productoId, Integer nuevoStock) {
-        Producto producto = buscarPorId(productoId);
-        producto.setStock(nuevoStock);
         return productoRepository.save(producto);
     }
 
