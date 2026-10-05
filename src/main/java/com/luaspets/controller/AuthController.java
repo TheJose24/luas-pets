@@ -4,6 +4,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +22,11 @@ public class AuthController {
 
     public AuthController(UsuarioService usuarioService) {
         this.usuarioService = usuarioService;
+    }
+
+    @InitBinder("usuario")
+    public void registrationFields(WebDataBinder binder) {
+        binder.setAllowedFields("nombre", "apellido", "email", "password", "telefono");
     }
 
     @GetMapping("/")

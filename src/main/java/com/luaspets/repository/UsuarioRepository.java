@@ -1,5 +1,8 @@
 package com.luaspets.repository;
 
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +15,10 @@ import com.luaspets.model.Usuario;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Usuario u where u.id = :id")
+    Optional<Usuario> findByIdForUpdate(@Param("id") Long id);
 
     Optional<Usuario> findByEmail(String email);
 

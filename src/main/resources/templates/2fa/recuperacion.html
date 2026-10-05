@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+<title>Verificación en dos pasos — LUAS Pets</title>
+</head>
+<body>
+<main class="container py-5" style="max-width:560px">
+<div class="card border-0 shadow-sm p-4">
+<h1 class="h4">LUAS Pets · Verificación en dos pasos</h1>
+<div class="lp-alert lp-alert-danger" th:if="${error}" th:text="${error}">
+</div>
+<p>La configuración se guardó. Copia estos códigos ahora: se muestran únicamente en esta respuesta. Cada código sirve una sola vez. Guárdalos en un lugar seguro y separado de tu autenticador.</p>
+<ul>
+<li th:each="codigo : ${codigos}">
+<code th:text="${codigo}">
+</code>
+</li>
+</ul>
+<p>Por seguridad, todas las sesiones anteriores requieren iniciar sesión de nuevo.</p>
+<a class="lp-btn-primary" th:href="@{/login}">Iniciar sesión de nuevo</a>
+<hr>
+<form th:action="@{/logout}" method="post">
+<button class="btn btn-outline-secondary" type="submit">Cerrar sesión</button>
+</form>
+</div>
+</main>
+</body>
+</html>

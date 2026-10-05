@@ -1,6 +1,11 @@
 package com.luaspets.model;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.JoinColumn;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,4 +60,25 @@ public class Usuario {
     @Column(name = "activo", nullable = false)
     @Builder.Default
     private Boolean activo = true;
+
+    @Column(name = "two_factor_enabled", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean twoFactorEnabled = false;
+
+    @Column(name = "two_factor_secret", length = 512)
+    private String twoFactorSecret;
+
+    @Column(name = "two_factor_last_counter")
+    private Long twoFactorLastCounter;
+
+    @Column(name = "security_version", nullable = false, columnDefinition = "bigint default 0")
+    @Builder.Default
+    private long securityVersion = 0;
+
+    @ElementCollection
+    @CollectionTable(name = "usuario_recovery_code", joinColumns = @JoinColumn(name = "usuario_id"))
+    @Column(name = "code_hash", nullable = false, length = 100)
+    @Builder.Default
+    private List<String> recoveryCodeHashes = new ArrayList<>();
+
 }

@@ -103,6 +103,9 @@ class PaginacionIntegrationTest {
     }
 
     private MockHttpSession loguearComo(String email, String password) throws Exception {
+        if (email.equals("admin@luaspets.com")) {
+            return MfaTestSupport.adminLogin(mvc(), webApplicationContext, email, password);
+        }
         MockHttpSession session = new MockHttpSession();
         mvc().perform(post("/login").with(csrf()).session(session)
                 .param("username", email)

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+<title>Verificación en dos pasos — LUAS Pets</title>
+</head>
+<body>
+<main class="container py-5" style="max-width:560px">
+<div class="card border-0 shadow-sm p-4">
+<h1 class="h4">LUAS Pets · Verificación en dos pasos</h1>
+<div class="lp-alert lp-alert-danger" th:if="${error}" th:text="${error}">
+</div>
+<p>Confirma tu contraseña actual para configurar tu autenticador.</p>
+<form th:action="@{/2fa/configurar}" method="post">
+<label for="passwordActual">Contraseña actual</label>
+<input class="form-control mb-3" id="passwordActual" name="passwordActual" type="password" autocomplete="current-password" required>
+<button class="lp-btn-primary border-0" type="submit">Continuar</button>
+</form>
+<hr>
+<form th:action="@{/logout}" method="post">
+<button class="btn btn-outline-secondary" type="submit">Cerrar sesión</button>
+</form>
+</div>
+</main>
+</body>
+</html>

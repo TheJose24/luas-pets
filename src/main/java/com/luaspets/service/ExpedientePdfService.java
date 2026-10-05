@@ -34,8 +34,7 @@ import com.luaspets.dto.ExpedienteMascota;
  * ExpedienteService, asi que el PDF nunca puede desincronizarse de la vista).
  *
  * Generado 100% programaticamente con OpenPDF (sin motor de renderizado HTML)
- * para mantener el consumo de memoria bajo: el plan gratuito de Render limita
- * el heap a 350 MB.
+ * para mantener bajo el consumo de memoria al generar expedientes.
  */
 @Service
 public class ExpedientePdfService {

@@ -41,6 +41,7 @@ import com.luaspets.service.NotificacionService;
         DoctorCitaController.class,
         DoctorPacienteController.class,
         MascotaController.class,
+        MfaController.class,
         NotificacionController.class,
         PedidoController.class,
         PerfilController.class,

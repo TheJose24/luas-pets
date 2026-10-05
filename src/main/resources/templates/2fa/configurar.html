@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head}">
+<title>Verificación en dos pasos — LUAS Pets</title>
+</head>
+<body>
+<main class="container py-5" style="max-width:560px">
+<div class="card border-0 shadow-sm p-4">
+<h1 class="h4">LUAS Pets · Verificación en dos pasos</h1>
+<div class="lp-alert lp-alert-danger" th:if="${error}" th:text="${error}">
+</div>
+<p>Escanea este QR con Google Authenticator, Microsoft Authenticator, Aegis o 2FAS. Esta configuración caduca en 10 minutos y solo se activa al verificar un código.</p>
+<img th:src="${qr}" width="280" height="280" alt="QR de configuración del autenticador" class="mx-auto d-block">
+<p>Clave manual (guárdala de forma privada): <code th:text="${secreto}">
+</code>
+</p>
+<form th:action="@{/2fa/activar}" method="post">
+<label for="codigo">Código de 6 dígitos</label>
+<input class="form-control mb-3" id="codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+<button class="lp-btn-primary border-0" type="submit">Activar verificación</button>
+</form>
+<hr>
+<form th:action="@{/logout}" method="post">
+<button class="btn btn-outline-secondary" type="submit">Cerrar sesión</button>
+</form>
+</div>
+</main>
+</body>
+</html>
