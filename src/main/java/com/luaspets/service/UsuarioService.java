@@ -1,5 +1,9 @@
 package com.luaspets.service;
 
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,6 +25,8 @@ public class UsuarioService {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
 
+    @PersistenceContext
+    private EntityManager entityManager;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificacionService notificacionService;
@@ -37,6 +43,12 @@ public class UsuarioService {
         if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new BusinessException("El email ya está registrado");
         }
+        usuario.setId(null);
+        usuario.setTwoFactorEnabled(false);
+        usuario.setTwoFactorSecret(null);
+        usuario.setTwoFactorLastCounter(null);
+        usuario.setSecurityVersion(0);
+        usuario.setRecoveryCodeHashes(new ArrayList<>());
         usuario.setRol(Rol.CLIENTE);
         usuario.setActivo(true);
         usuario.setFechaRegistro(LocalDateTime.now());
@@ -72,6 +84,12 @@ public class UsuarioService {
         if (usuarioRepository.existsByEmail(doctor.getEmail())) {
             throw new BusinessException("El email ya está registrado");
         }
+        doctor.setId(null);
+        doctor.setTwoFactorEnabled(false);
+        doctor.setTwoFactorSecret(null);
+        doctor.setTwoFactorLastCounter(null);
+        doctor.setSecurityVersion(0);
+        doctor.setRecoveryCodeHashes(new ArrayList<>());
         doctor.setRol(Rol.DOCTOR);
         doctor.setActivo(true);
         doctor.setFechaRegistro(LocalDateTime.now());
@@ -97,7 +115,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario actualizarPerfil(Long usuarioId, String nombre, String apellido, String telefono) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        Usuario usuario = usuarioRepository.findByIdForUpdate(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + usuarioId));
 
         if (nombre == null || nombre.isBlank() || apellido == null || apellido.isBlank()) {
@@ -115,9 +133,10 @@ public class UsuarioService {
     @Transactional
     public Usuario cambiarPassword(Long usuarioId, String passwordActual, String passwordNueva,
             String passwordConfirmacion) {
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        Usuario usuario = usuarioRepository.findByIdForUpdate(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + usuarioId));
 
+        entityManager.refresh(usuario, LockModeType.PESSIMISTIC_WRITE);
         if (!passwordEncoder.matches(passwordActual, usuario.getPassword())) {
             throw new BusinessException("La contraseña actual no es correcta");
         }
@@ -131,7 +150,10 @@ public class UsuarioService {
             throw new BusinessException("La nueva contraseña debe ser diferente a la actual");
         }
 
+        usuario.setSecurityVersion(usuario.getSecurityVersion() + 1);
         usuario.setPassword(passwordEncoder.encode(passwordNueva));
-        return usuarioRepository.save(usuario);
+        // La entidad bloqueada ya esta gestionada; Hibernate persiste ambos cambios
+        // al cerrar la transaccion sin volver a fusionar sus colecciones.
+        return usuario;
     }
 }

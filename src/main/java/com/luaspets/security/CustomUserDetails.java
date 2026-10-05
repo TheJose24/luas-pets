@@ -12,10 +12,14 @@ import com.luaspets.model.Usuario;
 public class CustomUserDetails implements UserDetails {
 
     private final Usuario usuario;
+    private final long securityVersion;
 
     public CustomUserDetails(Usuario usuario) {
         this.usuario = usuario;
+        this.securityVersion = usuario.getSecurityVersion();
     }
+
+    public long getSecurityVersion() { return securityVersion; }
 
     public Usuario getUsuario() {
         return usuario;

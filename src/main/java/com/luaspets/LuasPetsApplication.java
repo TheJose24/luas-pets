@@ -14,7 +14,7 @@ public class LuasPetsApplication {
 		SpringApplication.run(LuasPetsApplication.class, args);
 	}
 
-	// El contenedor de Render corre en UTC. Sin este ajuste, LocalDateTime.now()
+	// Un contenedor puede usar UTC como zona por defecto. Sin este ajuste, LocalDateTime.now()
 	// (usado en todo el sistema: fechaCreacion/fechaRegistro, la validacion de
 	// horario y anticipacion de citas, el calculo de "tiempoRelativo" de las
 	// notificaciones, y ahora tambien la tarea de recordatorios) devolveria la

@@ -7,6 +7,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,9 @@ import com.luaspets.model.Rol;
 import com.luaspets.model.Usuario;
 import com.luaspets.security.CustomUserDetails;
 import com.luaspets.service.UsuarioService;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Controller
 @RequestMapping("/perfil")
@@ -52,11 +56,11 @@ public class PerfilController {
     @PostMapping("/datos")
     public String actualizarDatos(@RequestParam String nombre, @RequestParam String apellido,
             @RequestParam(required = false) String telefono, @AuthenticationPrincipal CustomUserDetails userDetails,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes, HttpServletRequest request, HttpServletResponse response) {
         try {
             Usuario actualizado = usuarioService.actualizarPerfil(userDetails.getUsuario().getId(), nombre, apellido,
                     telefono);
-            actualizarAutenticacionEnSesion(actualizado);
+            actualizarAutenticacionEnSesion(actualizado, request, response);
         } catch (BusinessException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/perfil";
@@ -68,7 +72,7 @@ public class PerfilController {
     @PostMapping("/password")
     public String actualizarPassword(@RequestParam String passwordActual, @RequestParam String passwordNueva,
             @RequestParam String passwordConfirmacion, @AuthenticationPrincipal CustomUserDetails userDetails,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes, HttpServletRequest request, HttpServletResponse response) {
         try {
             usuarioService.cambiarPassword(userDetails.getUsuario().getId(), passwordActual, passwordNueva,
                     passwordConfirmacion);
@@ -76,8 +80,11 @@ public class PerfilController {
             redirectAttributes.addFlashAttribute("errorPassword", e.getMessage());
             return "redirect:/perfil";
         }
-        redirectAttributes.addFlashAttribute("exitoPassword", "Tu contraseña se actualizó correctamente.");
-        return "redirect:/perfil";
+        SecurityContextHolder.clearContext();
+        if (request.getSession(false) != null) {
+            request.getSession(false).invalidate();
+        }
+        return "redirect:/login?reauth";
     }
 
     // Tras actualizar nombre/apellido, el CustomUserDetails que vive en el
@@ -87,15 +94,25 @@ public class PerfilController {
     // de los dashboards seguiria mostrando el nombre anterior hasta que el
     // usuario cierre sesion y vuelva a entrar. Se reconstruye el principal con
     // el Usuario ya actualizado y se reemplaza el Authentication del
-    // SecurityContext; Spring Security guarda automaticamente ese contexto en
-    // la sesion HTTP al terminar la peticion, asi que el cambio persiste para
-    // las siguientes peticiones sin necesidad de un nuevo login.
-    private void actualizarAutenticacionEnSesion(Usuario actualizado) {
+    // SecurityContext. HttpSessionSecurityContextRepository guarda explicitamente
+    // el contexto actualizado para conservar el cambio en las siguientes
+    // peticiones, como requiere Spring Security 7.
+    private void actualizarAutenticacionEnSesion(Usuario actualizado, HttpServletRequest request,
+            HttpServletResponse response) {
         Authentication autenticacionActual = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacionActual.getPrincipal() instanceof CustomUserDetails old
+                && old.getSecurityVersion() != actualizado.getSecurityVersion()) {
+            SecurityContextHolder.clearContext();
+            if (request.getSession(false) != null) {
+                request.getSession(false).invalidate();
+            }
+            return;
+        }
         CustomUserDetails nuevoPrincipal = new CustomUserDetails(actualizado);
         Authentication nuevaAutenticacion = new UsernamePasswordAuthenticationToken(
                 nuevoPrincipal, autenticacionActual.getCredentials(), nuevoPrincipal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(nuevaAutenticacion);
+        new HttpSessionSecurityContextRepository().saveContext(SecurityContextHolder.getContext(), request, response);
     }
 
     private String textoRol(Rol rol) {

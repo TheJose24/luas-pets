@@ -77,12 +77,15 @@ En lugar del archivo anterior, puedes exportar la variable de entorno antes de a
 
 ```bash
 export DB_PASSWORD=tu_password_de_mysql
-mvn spring-boot:run
+export TOTP_ENCRYPTION_KEY=tu_clave_base64_guardada
+./mvnw spring-boot:run
 ```
 
 (En Windows PowerShell: `$env:DB_PASSWORD = "tu_password_de_mysql"`)
 
 Otras variables de entorno disponibles, todas con valores por defecto para desarrollo local: `DB_HOST` (localhost), `DB_PORT` (3306), `DB_NAME` (luas_pets), `DB_USER` (root), `SERVER_PORT` (8080).
+
+Antes de arrancar, configura también `TOTP_ENCRYPTION_KEY` como se explica abajo; es obligatoria en todos los perfiles de ejecución.
 
 La base de datos `luas_pets` se crea automáticamente si no existe (`createDatabaseIfNotExist=true`), y las tablas se generan/actualizan vía `ddl-auto=update`.
 
@@ -101,36 +104,80 @@ Al arrancar la aplicación por primera vez se crean automáticamente (si no exis
 
 También se precargan 8 productos de ejemplo en la tienda, y datos de demostración (mascotas, citas en distintos estados, un historial médico y un pedido entregado) asociados al cliente de demostración, si esas tablas están vacías.
 
-## Despliegue
+## Verificación en dos pasos
 
-La aplicación se despliega en **Render** (servicio web, plan free, construido directamente desde este repositorio de GitHub) y la base de datos MySQL está alojada en **Aiven**. La configuración del servicio está versionada en [`render.yaml`](render.yaml), así que Render la detecta automáticamente al conectar el repositorio; no hace falta configurar nada manualmente en la interfaz salvo las variables de entorno con datos sensibles.
+TOTP agrega un código de seis dígitos después de email y contraseña. Es compatible con Google Authenticator, Microsoft Authenticator, Aegis y 2FAS: intervalo de 30 segundos, SHA-1 y tolerancia de un intervalo anterior o siguiente. Un código aceptado no puede reutilizarse.
 
-Render ya no ofrece un entorno de ejecución nativo para Java, así que el despliegue se hace con el [`Dockerfile`](Dockerfile) del repositorio (`runtime: docker` en `render.yaml`): una construcción multi-etapa que compila el proyecto con la imagen oficial de Maven y luego copia únicamente el `.jar` resultante a una imagen liviana con solo el JRE. Como el Dockerfile ya define tanto la construcción como el comando de arranque, **no se configura ningún build command ni start command en el panel de Render**.
+### Configurar la clave antes de arrancar
 
-### Perfil activo
+Genera una clave aleatoria de 32 bytes una sola vez:
 
-En producción se arranca con `-Dspring.profiles.active=prod`, que activa `application-prod.properties` (caché de plantillas, `open-in-view` deshabilitado, logging reducido, pool de conexiones acotado y compresión de respuestas).
+```bash
+openssl rand -base64 32
+```
 
-### Variables de entorno a configurar en Render
+Guarda el resultado en `TOTP_ENCRYPTION_KEY` del `.env` real (ignorado por Git) o en el gestor de secretos del despliegue. No uses la clave de pruebas. La aplicación falla al arrancar si falta la clave, no es Base64 válido o no representa exactamente 32 bytes.
 
-Al crear el servicio Aiven te entrega un host, puerto, nombre de base de datos, usuario y contraseña (visibles en el panel de tu servicio MySQL en Aiven, sección "Connection details" o en el `Service URI`). Esos cinco valores se cargan en el panel de Render, en la sección **Environment** del servicio (no van en `render.yaml`, que solo declara que existen mediante `sync: false`):
+Los secretos TOTP se almacenan cifrados con AES-256-GCM y un nonce aleatorio por cifrado. Conserva una copia segura de la clave junto con tu política de copias de seguridad de la base de datos. **No reemplaces la clave sin una migración de recifrado**: otra clave no permite validar los secretos existentes. Reiniciar la aplicación conserva la misma clave.
 
-| Variable      | De dónde sale                                             |
-|---------------|-------------------------------------------------------------|
-| `DB_HOST`     | Host del servicio MySQL en Aiven                             |
-| `DB_PORT`     | Puerto del servicio MySQL en Aiven (normalmente no es 3306)  |
-| `DB_NAME`     | Nombre de la base de datos ya creada en Aiven                |
-| `DB_USER`     | Usuario que entrega Aiven                                    |
-| `DB_PASSWORD` | Contraseña que entrega Aiven                                 |
+### Activar y utilizar
 
-El resto de variables ya están fijadas en `render.yaml` y no requieren acción: `DB_SSL=true` y `DB_REQUIRE_SSL=true` (Aiven exige conexión cifrada), `DB_CREATE=false` (el usuario de Aiven no tiene permiso para crear bases de datos; la base ya existe de antemano). La versión de Java (21) la fija la imagen base del Dockerfile, no una variable de entorno. Render asigna el puerto HTTP automáticamente mediante su propia variable `PORT`, que la aplicación ya lee (`server.port=${PORT:${SERVER_PORT:8080}}`).
+1. CLIENTE/DOCTOR: abre **Mi Perfil → Verificación en dos pasos → Activar** y confirma tu contraseña actual. ADMIN: después del primer login con contraseña, completa directamente la configuración obligatoria.
+2. Escanea el QR con tu autenticador o introduce la clave manual. El QR se genera localmente; ningún tercero recibe el secreto.
+3. Introduce el primer código de seis dígitos. Solo este paso activa y guarda la configuración; abandonar el proceso no activa 2FA.
+4. Guarda los códigos de recuperación que se muestran una sola vez, fuera del dispositivo del autenticador.
 
-### Monitoreo y disponibilidad
+| Rol | Política |
+|-----|----------|
+| CLIENTE | Activación opcional desde Mi Perfil. |
+| DOCTOR | Activación opcional desde Mi Perfil. |
+| ADMIN | Obligatoria: el primer login, incluso el administrador demo, permite únicamente completar la configuración. No puede desactivarse. |
 
-El plan free de Render suspende el servicio tras 15 minutos sin tráfico. El endpoint público **`GET /health`** (sin autenticación, no consulta la base de datos) existe para que un servicio externo de ping lo llame periódicamente y mantenga la aplicación despierta, y también sirve como chequeo de disponibilidad general.
+Con 2FA activa, contraseña correcta lleva a `/2fa`; ningún dashboard, perfil u otra ruta autenticada se concede antes del segundo factor. Los procesos provisionales caducan y cerrar sesión elimina el estado del segundo factor.
 
-**Dependencia de este monitoreo para las tareas programadas:** la aplicación tiene una tarea programada (`RecordatorioService`, ver [`RecordatorioService.java`](src/main/java/com/luaspets/service/RecordatorioService.java)) que corre todos los días a las 08:00 hora de Perú y genera notificaciones internas recordando a clientes y doctores las citas del día siguiente. Esta tarea solo se ejecuta si el proceso de la aplicación está despierto en ese momento exacto. Si el servicio externo de ping dejara de funcionar y la aplicación estuviera dormida a las 08:00, la tarea de ese día simplemente no correría, y como solo procesa "el día siguiente" (no acumula rangos pasados), esos recordatorios se perderían de forma permanente — no hay una ejecución posterior que los recupere. Esto es una limitación conocida y aceptada: no se implementó ningún mecanismo de recuperación de ejecuciones perdidas (por ejemplo, detectar al arrancar que se saltó una ejecución y reprocesar el día correspondiente), porque agregaría complejidad considerable para un beneficio marginal en un proyecto académico. Mantener el servicio de monitoreo activo es, por lo tanto, un requisito implícito para la confiabilidad de esta funcionalidad, no solo para la disponibilidad general de la app.
+El flujo permite cinco solicitudes de verificación por sesión. Si las cinco fallan, el quinto intento todavía muestra el formulario con el error genérico; el sexto POST invalida la sesión antes de comprobar el código y exige iniciar sesión con contraseña nuevamente. Refrescar la página no reinicia el contador. El mismo límite protege la configuración y la administración MFA; completar correctamente el login MFA reinicia el contador.
 
-### ⚠️ Advertencia de seguridad
+### Recuperación y cambios sensibles
 
-La contraseña de la base de datos **nunca** debe escribirse en ningún archivo del repositorio (ni en `application.properties`, ni en `render.yaml`, ni en ningún commit). Solo debe existir como variable de entorno `DB_PASSWORD` configurada directamente en el panel de Render. Para desarrollo local, la contraseña va únicamente en `application-local.properties`, que está excluido por `.gitignore`.
+Si pierdes el autenticador, usa un código de recuperación en `/2fa`. Cada código sirve una sola vez; la base de datos conserva únicamente hashes. El código recupera acceso para esa sesión. Si todavía conservas el autenticador, puedes regenerar un conjunto desde Mi Perfil con contraseña y un TOTP nuevo; regenerar invalida todos los anteriores. Si perdiste el autenticador permanentemente, contacta al responsable para una recuperación operativa con identidad verificada: los códigos de recuperación no sustituyen el TOTP requerido para desactivar o modificar MFA.
+
+Desactivar 2FA para CLIENTE/DOCTOR exige contraseña actual y un TOTP válido nuevo; elimina secreto y códigos. Cambiar contraseña o configuración MFA, o regenerar códigos, revoca las demás sesiones mediante una versión de seguridad en la base de datos. La sesión actual también se revoca al modificar MFA o regenerar códigos: guarda los códigos mostrados antes de navegar e inicia sesión de nuevo. Espera al siguiente intervalo TOTP para no reutilizar el código que acabas de aceptar. Las sesiones antiguas deben iniciar sesión otra vez. Los formularios mantienen protección CSRF.
+
+Si pierdes tanto autenticador como códigos, no hay bypass por URL, código maestro ni desactivación automática. Contacta al responsable del sistema para verificar tu identidad y acordar una recuperación operativa segura. No borres datos ni cambies la clave de cifrado como intento de recuperación.
+
+## Despliegue en Docker / VPS
+
+La configuración definitiva es `docker-compose.yml`: ejecuta la aplicación en perfil `prod` con MySQL 8.0 y el proxy externo Nginx Proxy Manager. Es el único archivo Compose autodetectable; `docker compose` y `docker compose -f docker-compose.yml` seleccionan la misma configuración.
+
+El despliegue oficial actual es:
+
+```text
+VPS
+├── Nginx Proxy Manager
+├── LUAS Pets (Docker)
+└── MySQL 8 (Docker)
+```
+
+1. Copia `.env.example` a `.env` y completa las contraseñas de MySQL y `TOTP_ENCRYPTION_KEY`.
+2. Conserva el volumen `mysql_data` y las copias de seguridad existentes. Hibernate usa `ddl-auto=update` para incorporar columnas MFA y códigos de recuperación sin reinicializar datos; prueba primero con una copia de la BD.
+3. Ejecuta la configuración versionada:
+
+```bash
+docker compose -f docker-compose.yml up -d --build
+```
+
+El servicio `app` recibe `TOTP_ENCRYPTION_KEY` explícitamente desde `.env`; este archivo sirve para interpolación y sus variables no se inyectan automáticamente al contenedor. Sustituye `BASE64_DE_32_BYTES` por la clave generada: el placeholder es deliberadamente inválido. Se conservan los puertos, volúmenes y la configuración de Nginx Proxy Manager. Mantén HTTPS en el proxy.
+
+Producción utiliza el perfil `prod`. `GET /health` permite comprobar disponibilidad. El proceso debe estar activo a las 08:00 de Perú para ejecutar los recordatorios diarios.
+
+### Reloj del VPS
+
+TOTP depende de la hora UTC real, no de la zona horaria de presentación. Mantén NTP activo con `systemd-timesyncd`, chrony o el servicio equivalente del VPS. Comprueba la sincronización con `timedatectl status` donde esté disponible. Sincroniza también el teléfono; no aumentes la ventana de validación para ocultar un reloj incorrecto.
+
+## Pruebas
+
+```bash
+./mvnw test
+```
+
+Las pruebas usan H2 y una clave fija **exclusivamente de pruebas** en `src/test/resources/application-test.properties`; no requieren la clave del entorno de producción ni acceden al VPS.

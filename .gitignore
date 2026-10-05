@@ -45,3 +45,11 @@ build/
 .DS_Store
 
 .env
+.env.*
+!.env.example
+
+# Índice local regenerable
+.codegraph/
+
+# Seguimiento interno regenerable de agentes
+/odd/

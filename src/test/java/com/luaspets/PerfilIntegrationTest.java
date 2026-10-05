@@ -70,6 +70,9 @@ class PerfilIntegrationTest {
     }
 
     private MockHttpSession loguearComo(String email, String password) throws Exception {
+        if (email.equals("admin@luaspets.com")) {
+            return MfaTestSupport.adminLogin(mvc(), webApplicationContext, email, password);
+        }
         MockHttpSession session = new MockHttpSession();
         mvc().perform(post("/login").with(csrf()).session(session)
                 .param("username", email)
@@ -214,8 +217,9 @@ class PerfilIntegrationTest {
                         .param("passwordNueva", "nuevaClave123")
                         .param("passwordConfirmacion", "nuevaClave123"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/perfil"))
-                .andExpect(flash().attribute("exitoPassword", "Tu contraseña se actualizó correctamente."));
+                .andExpect(redirectedUrl("/login?reauth"));
+
+        assertThat(sesion.isInvalid()).isTrue();
 
         Usuario actualizado = usuarioRepository.findByEmail("perfil.passwordvalida@test.com").orElseThrow();
         assertThat(passwordEncoder.matches("nuevaClave123", actualizado.getPassword())).isTrue();

@@ -151,7 +151,37 @@
     </div>
 </div>
 
+<section class="container mb-4">
+<div class="card p-4">
+<h2 class="h5">Verificación en dos pasos</h2>
+<div class="lp-alert lp-alert-danger" th:if="${errorMfa}" th:text="${errorMfa}">
+</div>
+<p>Estado: <strong th:text="${usuario.twoFactorEnabled ? 'Activada' : 'Desactivada'}">
+</strong>
+</p>
+<a th:unless="${usuario.twoFactorEnabled}" class="lp-btn-primary" th:href="@{/2fa/configurar}">Activar verificación en dos pasos</a>
+<div th:if="${usuario.twoFactorEnabled}">
+<p>Para administrar esta protección, confirma tu contraseña y un código nuevo del autenticador.</p>
+<form th:action="@{/2fa/recuperacion}" method="post" class="mb-4">
+<label>Contraseña actual<input class="form-control" name="passwordActual" type="password" autocomplete="current-password" required>
+</label>
+<label>Código de 6 dígitos<input class="form-control" name="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+</label>
+<button class="btn btn-outline-primary" type="submit">Regenerar códigos de recuperación</button>
+</form>
+<form th:unless="${usuario.rol.name() == 'ADMIN'}" th:action="@{/2fa/desactivar}" method="post">
+<label>Contraseña actual<input class="form-control" name="passwordActual" type="password" autocomplete="current-password" required>
+</label>
+<label>Código de 6 dígitos<input class="form-control" name="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+</label>
+<button class="btn btn-outline-danger" type="submit">Desactivar verificación en dos pasos</button>
+</form>
+<p th:if="${usuario.rol.name() == 'ADMIN'}">La verificación en dos pasos es obligatoria para administradores.</p>
+</div>
+</div>
+</section>
 <div th:replace="~{fragments/layout :: scripts}"></div>
+
 <script>
     (function () {
         function attachToggle(buttonId, inputId, iconId) {

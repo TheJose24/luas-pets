@@ -39,6 +39,7 @@
                 <i class="bi bi-info-circle"></i> Sesión cerrada correctamente
             </div>
 
+            <div class="lp-alert lp-alert-info" th:if="${param.reauth}">Por seguridad, inicia sesión de nuevo.</div>
             <form th:action="@{/login}" method="post" class="lp-auth-form needs-validation" novalidate>
                 <div class="mb-3">
                     <label for="username" class="form-label" style="font-size: 0.9rem; font-weight: 500; color: var(--lp-ink);">Correo electrónico</label>
