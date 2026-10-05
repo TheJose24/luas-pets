@@ -1,0 +1,76 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: luas-pets-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - luas-network
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: luas-pets-app
+    restart: unless-stopped
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      DB_SSL: "false"
+      DB_REQUIRE_SSL: "false"
+      DB_CREATE: "false"
+
+      SERVER_PORT: 8080
+
+      TZ: America/Lima
+
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+
+    networks:
+      - luas-network
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+
+volumes:
+  mysql_data:
+
+
+networks:
+  luas-network:
+    driver: bridge
