@@ -5,8 +5,10 @@ import com.luaspets.security.CustomUserDetailsService;
 import com.luaspets.security.MfaGuardFilter;
 import com.luaspets.security.RoleBasedAuthenticationSuccessHandler;
 import java.time.Clock;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -36,6 +38,17 @@ public class SecurityConfig {
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService);
         authenticationProvider.setPasswordEncoder(passwordEncoder);
         return new ProviderManager(authenticationProvider);
+    }
+
+    // A separate chain keeps monitoring independent of application login and MFA.
+    @Bean
+    @Order(1)
+    public SecurityFilterChain managementFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher(EndpointRequest.toAnyEndpoint())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(EndpointRequest.to("health", "info", "prometheus")).permitAll()
+                .anyRequest().denyAll());
+        return http.build();
     }
 
     @Bean
