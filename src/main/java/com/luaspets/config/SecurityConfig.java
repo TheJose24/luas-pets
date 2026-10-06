@@ -45,7 +45,8 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth
                 -> auth
                     .requestMatchers("/", "/registro", "/login", "/error", "/health", "/css/**", "/js/**",
-                        "/images/**", "/webjars/**")
+                        "/images/**", "/webjars/**", "/manifest.webmanifest", "/sw.js",
+                        "/offline.html", "/icons/**")
                     .permitAll()
                     .requestMatchers("/cliente/**")
                     .hasRole("CLIENTE")

@@ -19,7 +19,8 @@ public class MfaGuardFilter extends OncePerRequestFilter {
         this.users = users;
     }
     private static final Set<String> PUBLIC =
-        Set.of("/", "/login", "/registro", "/health", "/error", "/logout");
+        Set.of("/", "/login", "/registro", "/health", "/error", "/logout",
+            "/manifest.webmanifest", "/sw.js", "/offline.html");
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
         FilterChain chain) throws ServletException, IOException {
@@ -33,7 +34,7 @@ public class MfaGuardFilter extends OncePerRequestFilter {
             }
             String path = request.getRequestURI().substring(request.getContextPath().length());
             boolean publicPath = PUBLIC.contains(path) || path.startsWith("/css/") || path.startsWith("/js/")
-                || path.startsWith("/images/") || path.startsWith("/webjars/");
+                || path.startsWith("/images/") || path.startsWith("/webjars/") || path.startsWith("/icons/");
             var session = request.getSession(false);
             Object state = session == null ? null : session.getAttribute(MfaSession.STATE);
             String required = user.isTwoFactorEnabled() ? "/2fa"
