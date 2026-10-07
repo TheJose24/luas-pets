@@ -8,17 +8,96 @@ KEEP_RELEASES=5
 KEEP_ROLLBACKS=2
 KEEP_BACKUPS=7
 
-echo "===== LUAS PETS RETENTION DRY-RUN ====="
+MODE="dry-run"
+
+case "${1:-}" in
+  "")
+    ;;
+  --apply)
+    MODE="apply"
+    ;;
+  *)
+    echo "Usage: $0 [--apply]" >&2
+    exit 2
+    ;;
+esac
+
+if [[ ! -d "$RELEASE_ROOT" ]]; then
+  echo "ERROR: release root does not exist: $RELEASE_ROOT" >&2
+  exit 1
+fi
+
+if [[ ! -d "$BACKUP_ROOT" ]]; then
+  echo "ERROR: backup root does not exist: $BACKUP_ROOT" >&2
+  exit 1
+fi
 
 production_image="$(cat "$RELEASE_ROOT/production-image" 2>/dev/null || true)"
 latest_image="$(cat "$RELEASE_ROOT/latest-image" 2>/dev/null || true)"
-running_image="$(docker inspect luas-pets-app --format '{{.Config.Image}}' 2>/dev/null || true)"
+running_image="$(
+  docker inspect luas-pets-app \
+    --format '{{.Config.Image}}' \
+    2>/dev/null || true
+)"
+
+if [[ -z "$production_image" ]]; then
+  echo "ERROR: production-image metadata is missing." >&2
+  exit 1
+fi
+
+if [[ -z "$latest_image" ]]; then
+  echo "ERROR: latest-image metadata is missing." >&2
+  exit 1
+fi
+
+if [[ -z "$running_image" ]]; then
+  echo "ERROR: luas-pets-app is not running or cannot be inspected." >&2
+  exit 1
+fi
+
+echo "===== LUAS PETS RETENTION ====="
+echo "Mode: $MODE"
 
 echo
 echo "Protected:"
 echo "  production: $production_image"
 echo "  latest:     $latest_image"
 echo "  running:    $running_image"
+
+delete_release() {
+  local dir="$1"
+  local image="$2"
+
+  echo "DELETE release $(basename "$dir") $image"
+
+  if [[ "$MODE" == "apply" ]]; then
+    if [[ -n "$image" ]] && docker image inspect "$image" >/dev/null 2>&1; then
+      docker image rm "$image"
+    fi
+
+    rm -rf -- "$dir"
+  fi
+}
+
+delete_rollback() {
+  local tag="$1"
+
+  echo "DELETE $tag"
+
+  if [[ "$MODE" == "apply" ]]; then
+    docker image rm "$tag"
+  fi
+}
+
+delete_backup() {
+  local backup="$1"
+
+  echo "DELETE $backup"
+
+  if [[ "$MODE" == "apply" ]]; then
+    rm -- "$backup"
+  fi
+}
 
 echo
 echo "===== RELEASE DIRECTORIES ====="
@@ -45,7 +124,7 @@ for i in "${!release_dirs[@]}"; do
           "$image" == "$running_image" ]]; then
     echo "KEEP   protected release $sha $image"
   else
-    echo "DELETE release $sha $image"
+    delete_release "$dir" "$image"
   fi
 done
 
@@ -68,7 +147,7 @@ for i in "${!rollback_tags[@]}"; do
   if (( i < KEEP_ROLLBACKS )); then
     echo "KEEP   $tag"
   else
-    echo "DELETE $tag"
+    delete_rollback "$tag"
   fi
 done
 
@@ -91,9 +170,14 @@ for i in "${!backups[@]}"; do
   if (( i < KEEP_BACKUPS )); then
     echo "KEEP   $backup"
   else
-    echo "DELETE $backup"
+    delete_backup "$backup"
   fi
 done
 
 echo
-echo "DRY-RUN COMPLETE — nothing was deleted."
+
+if [[ "$MODE" == "apply" ]]; then
+  echo "APPLY COMPLETE."
+else
+  echo "DRY-RUN COMPLETE — nothing was deleted."
+fi
