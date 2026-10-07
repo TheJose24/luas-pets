@@ -54,9 +54,10 @@ echo "===== ROLLBACK TAGS ====="
 
 mapfile -t rollback_tags < <(
   docker images \
-    --format '{{.Repository}}:{{.Tag}}' \
-    | grep '^luas-pets-app:rollback-' \
+    --format '{{.CreatedAt}}|{{.Repository}}:{{.Tag}}' \
+    | grep '|luas-pets-app:rollback-' \
     | sort -r \
+    | cut -d'|' -f2- \
     || true
 )
 
