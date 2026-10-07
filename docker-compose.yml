@@ -30,6 +30,7 @@ services:
 
 
   app:
+    image: ${APP_IMAGE:-luas-pets-app:latest}
     build:
       context: .
       dockerfile: Dockerfile
