@@ -59,7 +59,7 @@ public class SecurityConfig {
                 -> auth
                     .requestMatchers("/", "/registro", "/login", "/error", "/health", "/css/**", "/js/**",
                         "/images/**", "/webjars/**", "/manifest.webmanifest", "/sw.js",
-                        "/offline.html", "/icons/**")
+                        "/offline.html", "/icons/**", "/robots.txt")
                     .permitAll()
                     .requestMatchers("/cliente/**")
                     .hasRole("CLIENTE")

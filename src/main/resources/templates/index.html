@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head}">
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/layout :: head}"></th:block>
     <title>Luas Pets</title>
+    <meta name="description" content="Luas Pets: atención veterinaria para tu mascota, citas en línea, historial médico digital y una tienda especializada en su cuidado." />
 </head>
 <body>
 
@@ -34,9 +36,14 @@
             </div>
         </div>
         <div class="col-12 col-lg-6 order-1 order-lg-2">
-            <img th:src="@{/images/hero.jpg}"
-                alt="Veterinario atendiendo a una mascota" class="img-fluid w-100"
-                style="border-radius: 16px; box-shadow: 0 20px 40px rgba(16, 24, 40, 0.12); object-fit: cover; max-height: 480px;" />
+            <picture>
+                <source type="image/webp"
+                    th:srcset="|@{/images/hero-480.webp} 480w, @{/images/hero-800.webp} 800w, @{/images/hero-1280.webp} 1280w|"
+                    sizes="(min-width: 1400px) 624px, (min-width: 1200px) 534px, (min-width: 992px) 444px, (min-width: 768px) 696px, (min-width: 576px) 516px, calc(100vw - 24px)" />
+                <img th:src="@{/images/hero.jpg}" width="2752" height="1536"
+                    alt="Veterinario atendiendo a una mascota" class="img-fluid w-100"
+                    style="border-radius: 16px; box-shadow: 0 20px 40px rgba(16, 24, 40, 0.12); object-fit: cover; max-height: 480px;" />
+            </picture>
         </div>
     </div>
 </div>
@@ -56,7 +63,7 @@
                     style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
                     <i class="bi bi-calendar-check" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
                 </div>
-                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Agenda tus citas</h5>
+                <h3 class="h5 fw-bold mb-2" style="color: var(--lp-ink);">Agenda tus citas</h3>
                 <p class="mb-0" style="color: var(--lp-body);">Reserva, reprograma o cancela citas con nuestros doctores desde cualquier lugar.</p>
             </div>
         </div>
@@ -66,7 +73,7 @@
                     style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
                     <i class="bi bi-file-medical" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
                 </div>
-                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Historial médico digital</h5>
+                <h3 class="h5 fw-bold mb-2" style="color: var(--lp-ink);">Historial médico digital</h3>
                 <p class="mb-0" style="color: var(--lp-body);">Consulta diagnósticos y tratamientos de cada visita de tu mascota.</p>
             </div>
         </div>
@@ -76,7 +83,7 @@
                     style="width: 56px; height: 56px; border-radius: 14px; background-color: var(--lp-primary-tint);">
                     <i class="bi bi-shop" style="font-size: 1.5rem; color: var(--lp-primary);"></i>
                 </div>
-                <h5 class="fw-bold mb-2" style="color: var(--lp-ink);">Tienda para mascotas</h5>
+                <h3 class="h5 fw-bold mb-2" style="color: var(--lp-ink);">Tienda para mascotas</h3>
                 <p class="mb-0" style="color: var(--lp-body);">Encuentra alimento, juguetes, higiene y accesorios para tu compañero.</p>
             </div>
         </div>
@@ -90,9 +97,14 @@
     <div class="container py-4">
         <div class="row align-items-center g-5">
             <div class="col-12 col-lg-6">
-                <img th:src="@{/images/nosotros.jpg}"
-                    alt="Equipo veterinario de Luas Pets" class="img-fluid w-100"
-                    style="border-radius: 16px; box-shadow: 0 12px 30px rgba(16, 24, 40, 0.1); object-fit: cover; max-height: 420px;" />
+                <picture>
+                    <source type="image/webp"
+                        th:srcset="|@{/images/nosotros-480.webp} 480w, @{/images/nosotros-800.webp} 800w, @{/images/nosotros-1280.webp} 1280w|"
+                        sizes="(min-width: 1400px) 624px, (min-width: 1200px) 534px, (min-width: 992px) 444px, (min-width: 768px) 696px, (min-width: 576px) 516px, calc(100vw - 24px)" />
+                    <img th:src="@{/images/nosotros.jpg}" width="2752" height="1536" loading="lazy" decoding="async"
+                        alt="Equipo veterinario de Luas Pets" class="img-fluid w-100"
+                        style="border-radius: 16px; box-shadow: 0 12px 30px rgba(16, 24, 40, 0.1); object-fit: cover; max-height: 420px;" />
+                </picture>
             </div>
             <div class="col-12 col-lg-6">
                 <h2 class="lp-page-title">Sobre Luas Pets</h2>

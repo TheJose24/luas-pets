@@ -53,3 +53,6 @@ build/
 
 # Seguimiento interno regenerable de agentes
 /odd/
+
+# Evidencias generadas de pruebas
+/evidence/
