@@ -14,6 +14,7 @@ pipeline {
         MAVEN_IMAGE = 'maven:3.9-eclipse-temurin-21'
         NODE_IMAGE = 'node:24-bookworm-slim'
         M2_VOLUME = 'jenkins-luas-pets-m2'
+        CI_IMAGE_REPOSITORY = 'luas-pets-ci'
     }
 
     stages {
@@ -95,6 +96,48 @@ pipeline {
                 }
             }
         }
+
+        stage('Docker image build') {
+            steps {
+                ws(env.CI_WORKDIR) {
+                    sh '''
+                        set -eu
+
+                        SHORT_SHA="$(git rev-parse --short=12 HEAD)"
+                        FULL_SHA="$(git rev-parse HEAD)"
+                        CI_IMAGE="${CI_IMAGE_REPOSITORY}:${BUILD_NUMBER}-${SHORT_SHA}"
+
+                        printf '%s' "$CI_IMAGE" > .jenkins-ci-image
+
+                        echo "===== DOCKER BUILD ====="
+                        echo "Image: $CI_IMAGE"
+                        echo "Commit: $FULL_SHA"
+
+                        docker build \
+                        --label "org.opencontainers.image.revision=$FULL_SHA" \
+                        --label "ci.jenkins.job=$JOB_NAME" \
+                        --label "ci.jenkins.build=$BUILD_NUMBER" \
+                        -t "$CI_IMAGE" \
+                        .
+
+                        echo
+                        echo "===== IMAGE ====="
+                        docker image inspect "$CI_IMAGE" \
+                        --format 'ID={{.Id}} Size={{.Size}} Created={{.Created}}'
+
+                        echo
+                        echo "===== JAVA RUNTIME ====="
+                        docker run --rm \
+                        --entrypoint java \
+                        "$CI_IMAGE" \
+                        -version
+
+                        echo
+                        echo "DOCKER IMAGE BUILD: OK"
+                    '''
+                }
+            }
+        }
     }
 
     post {
@@ -107,6 +150,20 @@ pipeline {
         }
 
         always {
+            ws(env.CI_WORKDIR) {
+                sh '''
+                    if [ -f .jenkins-ci-image ]; then
+                        CI_IMAGE="$(cat .jenkins-ci-image)"
+
+                        echo "===== CI IMAGE CLEANUP ====="
+                        echo "Removing $CI_IMAGE"
+
+                        docker image rm -f "$CI_IMAGE" || true
+                        rm -f .jenkins-ci-image
+                    fi
+                '''
+            }
+
             echo 'CI finalizado. No se realizó ningún despliegue.'
         }
     }
