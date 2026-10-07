@@ -364,6 +364,21 @@ pipeline {
                     printf '%s\\n' "$PRODUCTION_IMAGE_ID" \
                     > "${RELEASE_ROOT}/production-image-id.tmp"
 
+                    echo "===== UPDATE LATEST TAG ====="
+
+                    docker image tag \
+                    "$PRODUCTION_IMAGE_ID" \
+                    luas-pets-app:latest
+
+                    LATEST_IMAGE_ID="$(
+                    docker image inspect luas-pets-app:latest \
+                        --format '{{.Id}}'
+                    )"
+
+                    test "$LATEST_IMAGE_ID" = "$PRODUCTION_IMAGE_ID"
+
+                    echo "LATEST TAG: OK"
+
                     mv "${RELEASE_ROOT}/production-image.tmp" \
                     "${RELEASE_ROOT}/production-image"
 
