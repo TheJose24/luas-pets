@@ -15,6 +15,8 @@ pipeline {
         NODE_IMAGE = 'node:24-bookworm-slim'
         M2_VOLUME = 'jenkins-luas-pets-m2'
         CI_IMAGE_REPOSITORY = 'luas-pets-ci'
+        RELEASE_IMAGE_REPOSITORY = 'luas-pets-app'
+        RELEASE_ROOT = '/proyects/jenkins/releases/luas-pets'
     }
 
     stages {
@@ -142,6 +144,91 @@ pipeline {
 
     post {
         success {
+            ws(env.CI_WORKDIR) {
+                sh '''
+                    set -eu
+
+                    CI_IMAGE="$(cat .jenkins-ci-image)"
+                    CI_IMAGE_ID="$(
+                        docker image inspect "$CI_IMAGE" \
+                        --format '{{.Id}}'
+                    )"
+
+                    FULL_SHA="$(git rev-parse HEAD)"
+                    SHORT_SHA="$(git rev-parse --short=12 HEAD)"
+
+                    RELEASE_IMAGE="${RELEASE_IMAGE_REPOSITORY}:git-${SHORT_SHA}"
+                    RELEASE_DIR="${RELEASE_ROOT}/${FULL_SHA}"
+
+                    echo "===== RELEASE PROMOTION ====="
+                    echo "CI image:      $CI_IMAGE"
+                    echo "CI image ID:   $CI_IMAGE_ID"
+                    echo "Release image: $RELEASE_IMAGE"
+                    echo "Commit:        $FULL_SHA"
+
+                    # Un release tag no debe poder sobrescribirse.
+                    if docker image inspect "$RELEASE_IMAGE" >/dev/null 2>&1; then
+                        echo "ERROR: release tag already exists: $RELEASE_IMAGE"
+                        exit 1
+                    fi
+
+                    if [ -e "$RELEASE_DIR" ]; then
+                        echo "ERROR: release directory already exists: $RELEASE_DIR"
+                        exit 1
+                    fi
+
+                    # Es exactamente la misma imagen que superó CI.
+                    docker image tag "$CI_IMAGE" "$RELEASE_IMAGE"
+
+                    RELEASE_IMAGE_ID="$(
+                        docker image inspect "$RELEASE_IMAGE" \
+                        --format '{{.Id}}'
+                    )"
+
+                    test "$CI_IMAGE_ID" = "$RELEASE_IMAGE_ID"
+
+                    mkdir "$RELEASE_DIR"
+
+                    cp docker-compose.yml \
+                    "$RELEASE_DIR/docker-compose.yml"
+
+                    COMPOSE_SHA="$(
+                        sha256sum docker-compose.yml | awk '{print $1}'
+                    )"
+
+                    printf '%s\\n' "$RELEASE_IMAGE" \
+                    > "$RELEASE_DIR/image"
+
+                    printf '%s\\n' "$RELEASE_IMAGE_ID" \
+                    > "$RELEASE_DIR/image-id"
+
+                    printf '%s\\n' "$FULL_SHA" \
+                    > "$RELEASE_DIR/sha"
+
+                    printf '%s\\n' "$COMPOSE_SHA" \
+                    > "$RELEASE_DIR/compose-sha256"
+
+                    printf '%s\\n' "$BUILD_NUMBER" \
+                    > "$RELEASE_DIR/build-number"
+
+                    printf '%s\\n' "$RELEASE_IMAGE" \
+                    > "${RELEASE_ROOT}/latest-image.tmp"
+
+                    printf '%s\\n' "$FULL_SHA" \
+                    > "${RELEASE_ROOT}/latest-sha.tmp"
+
+                    mv "${RELEASE_ROOT}/latest-image.tmp" \
+                    "${RELEASE_ROOT}/latest-image"
+
+                    mv "${RELEASE_ROOT}/latest-sha.tmp" \
+                    "${RELEASE_ROOT}/latest-sha"
+
+                    echo
+                    echo "RELEASE IMAGE READY: $RELEASE_IMAGE"
+                    echo "RELEASE IMAGE ID:    $RELEASE_IMAGE_ID"
+                '''
+            }
+
             echo 'LUAS Pets CI: SUCCESS'
         }
 
@@ -149,7 +236,7 @@ pipeline {
             echo 'LUAS Pets CI: FAILED'
         }
 
-        always {
+        cleanup {
             ws(env.CI_WORKDIR) {
                 sh '''
                     if [ -f .jenkins-ci-image ]; then

@@ -1,0 +1,442 @@
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        string(
+            name: 'APP_IMAGE',
+            defaultValue: '',
+            description: 'Imagen a desplegar. Vacío = último release CI aprobado.'
+        )
+
+        string(
+            name: 'GIT_SHA',
+            defaultValue: '',
+            description: 'SHA completo. Vacío = último release CI aprobado.'
+        )
+    }
+
+    environment {
+        RELEASE_ROOT = '/proyects/jenkins/releases/luas-pets'
+        PROD_ENV = '/proyects/luas-pets/.env'
+        BACKUP_ROOT = '/proyects/backups/luas-pets-db'
+        COMPOSE_PROJECT = 'luas-pets'
+        PUBLIC_URL = 'https://luas-pet.devbyjose.org/'
+    }
+
+    stages {
+
+        stage('Resolve release') {
+            steps {
+                script {
+                    env.RELEASE_IMAGE = params.APP_IMAGE?.trim()
+                    env.RELEASE_SHA = params.GIT_SHA?.trim()
+
+                    if (!env.RELEASE_IMAGE) {
+                        env.RELEASE_IMAGE = sh(
+                            script: 'cat "$RELEASE_ROOT/latest-image"',
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    if (!env.RELEASE_SHA) {
+                        env.RELEASE_SHA = sh(
+                            script: 'cat "$RELEASE_ROOT/latest-sha"',
+                            returnStdout: true
+                        ).trim()
+                    }
+                }
+
+                sh '''
+                    set -eu
+
+                    printf '%s\\n' "$RELEASE_SHA" \
+                    | grep -Eq '^[0-9a-f]{40}$'
+
+                    SHORT_SHA="$(
+                        printf '%s' "$RELEASE_SHA" | cut -c1-12
+                    )"
+
+                    EXPECTED_TAG="luas-pets-app:git-${SHORT_SHA}"
+
+                    test "$RELEASE_IMAGE" = "$EXPECTED_TAG"
+
+                    RELEASE_DIR="${RELEASE_ROOT}/${RELEASE_SHA}"
+
+                    test -f "$RELEASE_DIR/docker-compose.yml"
+                    test -f "$RELEASE_DIR/image"
+                    test -f "$RELEASE_DIR/image-id"
+                    test -f "$RELEASE_DIR/sha"
+                    test -f "$RELEASE_DIR/compose-sha256"
+                    test -f "$PROD_ENV"
+
+                    STORED_IMAGE="$(cat "$RELEASE_DIR/image")"
+                    STORED_IMAGE_ID="$(cat "$RELEASE_DIR/image-id")"
+                    STORED_SHA="$(cat "$RELEASE_DIR/sha")"
+                    STORED_COMPOSE_SHA="$(cat "$RELEASE_DIR/compose-sha256")"
+
+                    test "$STORED_IMAGE" = "$RELEASE_IMAGE"
+                    test "$STORED_SHA" = "$RELEASE_SHA"
+
+                    ACTUAL_IMAGE_ID="$(
+                        docker image inspect "$RELEASE_IMAGE" \
+                        --format '{{.Id}}'
+                    )"
+
+                    test "$ACTUAL_IMAGE_ID" = "$STORED_IMAGE_ID"
+
+                    IMAGE_SHA="$(
+                        docker image inspect "$RELEASE_IMAGE" \
+                        --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+                    )"
+
+                    test "$IMAGE_SHA" = "$RELEASE_SHA"
+
+                    ACTUAL_COMPOSE_SHA="$(
+                        sha256sum "$RELEASE_DIR/docker-compose.yml" \
+                        | awk '{print $1}'
+                    )"
+
+                    test "$ACTUAL_COMPOSE_SHA" = "$STORED_COMPOSE_SHA"
+
+                    echo "===== RELEASE ====="
+                    echo "Image:    $RELEASE_IMAGE"
+                    echo "Image ID: $ACTUAL_IMAGE_ID"
+                    echo "Commit:   $RELEASE_SHA"
+                    echo "Config:   $RELEASE_DIR/docker-compose.yml"
+                '''
+            }
+        }
+
+        stage('Approval') {
+            steps {
+                input(
+                    message: "Deploy ${env.RELEASE_IMAGE} to LUAS Pets production?",
+                    ok: 'Deploy',
+                    submitter: 'devbyjose'
+                )
+            }
+        }
+
+        stage('Database backup') {
+            steps {
+                script {
+                    env.DB_BACKUP = sh(
+                        script: '''
+                            set -eu
+
+                            BACKUP="$BACKUP_ROOT/luas-pets-pre-deploy-${BUILD_NUMBER}-$(date +%Y%m%d-%H%M%S).sql"
+
+                            set +x
+                            docker exec luas-pets-mysql \
+                              sh -c 'exec mysqldump \
+                                -uroot \
+                                -p"$MYSQL_ROOT_PASSWORD" \
+                                --single-transaction \
+                                --quick \
+                                --routines \
+                                --triggers \
+                                "$MYSQL_DATABASE"' \
+                              > "$BACKUP"
+                            set -x
+
+                            test -s "$BACKUP"
+                            chmod 600 "$BACKUP"
+
+                            printf '%s' "$BACKUP"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+                }
+
+                sh '''
+                    echo "===== DATABASE BACKUP ====="
+                    stat -c 'mode=%a size=%s file=%n' "$DB_BACKUP"
+                '''
+            }
+        }
+
+        stage('Prepare rollback') {
+            steps {
+                script {
+                    env.ROLLBACK_IMAGE = sh(
+                        script: '''
+                            set -eu
+
+                            CURRENT_ID="$(
+                                docker inspect luas-pets-app \
+                                --format '{{.Image}}'
+                            )"
+
+                            ROLLBACK_IMAGE="luas-pets-app:rollback-${BUILD_NUMBER}-$(date +%Y%m%d%H%M%S)"
+
+                            docker image tag \
+                            "$CURRENT_ID" \
+                            "$ROLLBACK_IMAGE"
+
+                            printf '%s' "$ROLLBACK_IMAGE"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    env.ROLLBACK_COMPOSE = sh(
+                        script: '''
+                            set -eu
+
+                            if [ -f "${RELEASE_ROOT}/production-sha" ]; then
+                                PREVIOUS_SHA="$(
+                                    cat "${RELEASE_ROOT}/production-sha"
+                                )"
+
+                                printf '%s\\n' "$PREVIOUS_SHA" \
+                                | grep -Eq '^[0-9a-f]{40}$'
+
+                                COMPOSE_FILE="${RELEASE_ROOT}/${PREVIOUS_SHA}/docker-compose.yml"
+
+                                test -f "$COMPOSE_FILE"
+                            else
+                                # Primer deployment CD:
+                                # todavía no existe una release anterior registrada.
+                                # El cambio actual del Compose solo añade APP_IMAGE,
+                                # por lo que esta versión es compatible con la imagen
+                                # pre-CD para realizar rollback.
+                                COMPOSE_FILE="${RELEASE_ROOT}/${RELEASE_SHA}/docker-compose.yml"
+
+                                echo "First CD deployment: using release compose as rollback baseline." >&2
+                            fi
+
+                            printf '%s' "$COMPOSE_FILE"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+                }
+
+                sh '''
+                    echo "===== ROLLBACK ====="
+                    echo "Image:  $ROLLBACK_IMAGE"
+                    echo "Config: $ROLLBACK_COMPOSE"
+
+                    docker image inspect "$ROLLBACK_IMAGE" \
+                    --format 'ID={{.Id}}'
+
+                    test -f "$ROLLBACK_COMPOSE"
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    env.DEPLOY_STARTED = 'true'
+                }
+
+                sh '''
+                    set -eu
+
+                    RELEASE_DIR="${RELEASE_ROOT}/${RELEASE_SHA}"
+
+                    echo "===== DEPLOY ====="
+                    echo "Image: $RELEASE_IMAGE"
+
+                    APP_IMAGE="$RELEASE_IMAGE" \
+                    docker compose \
+                      --project-name "$COMPOSE_PROJECT" \
+                      --env-file "$PROD_ENV" \
+                      -f "$RELEASE_DIR/docker-compose.yml" \
+                      up -d \
+                      --no-deps \
+                      --no-build \
+                      --force-recreate \
+                      app
+
+                    RELEASE_DIR="${RELEASE_ROOT}/${RELEASE_SHA}"
+
+                    EXPECTED_IMAGE_ID="$(
+                        cat "$RELEASE_DIR/image-id"
+                    )"
+
+                    ACTUAL_IMAGE_ID="$(
+                        docker inspect luas-pets-app \
+                        --format '{{.Image}}'
+                    )"
+
+                    if [ "$ACTUAL_IMAGE_ID" != "$EXPECTED_IMAGE_ID" ]; then
+                        echo "DEPLOY IMAGE ID MISMATCH"
+                        echo "Expected: $EXPECTED_IMAGE_ID"
+                        echo "Actual:   $ACTUAL_IMAGE_ID"
+                        exit 1
+                    fi
+
+                    echo "DEPLOY IMAGE ID: OK"
+                '''
+            }
+        }
+
+        stage('Internal health') {
+            steps {
+                sh '''
+                    set -eu
+
+                    echo "===== INTERNAL HEALTH ====="
+
+                    i=1
+
+                    while [ "$i" -le 24 ]; do
+                        if docker run --rm \
+                          --network luas-pets_luas-network \
+                          curlimages/curl:8.12.1 \
+                          -fsS \
+                          http://luas-pets-app:9091/actuator/health \
+                          | grep -q '"status":"UP"'
+                        then
+                            echo "INTERNAL HEALTH: UP"
+                            exit 0
+                        fi
+
+                        echo "Waiting for application... attempt $i/24"
+                        sleep 5
+                        i=$((i + 1))
+                    done
+
+                    echo "INTERNAL HEALTH: FAILED"
+                    exit 1
+                '''
+            }
+        }
+
+        stage('Public health') {
+            steps {
+                sh '''
+                    set -eu
+
+                    echo "===== PUBLIC HEALTH ====="
+
+                    i=1
+
+                    while [ "$i" -le 12 ]; do
+                        STATUS="$(
+                            curl -sS \
+                              -o /dev/null \
+                              -w '%{http_code}' \
+                              "$PUBLIC_URL" \
+                            || true
+                        )"
+
+                        if [ "$STATUS" = "200" ]; then
+                            echo "PUBLIC HEALTH: HTTP 200"
+                            exit 0
+                        fi
+
+                        echo "Public HTTP=$STATUS attempt $i/12"
+                        sleep 5
+                        i=$((i + 1))
+                    done
+
+                    echo "PUBLIC HEALTH: FAILED"
+                    exit 1
+                '''
+            }
+        }
+
+        stage('Promote release') {
+            steps {
+                sh '''
+                    set -eu
+
+                    RELEASE_DIR="${RELEASE_ROOT}/${RELEASE_SHA}"
+                    PRODUCTION_IMAGE_ID="$(
+                        cat "$RELEASE_DIR/image-id"
+                    )"
+
+                    printf '%s\\n' "$RELEASE_IMAGE" \
+                    > "${RELEASE_ROOT}/production-image.tmp"
+
+                    printf '%s\\n' "$RELEASE_SHA" \
+                    > "${RELEASE_ROOT}/production-sha.tmp"
+
+                    printf '%s\\n' "$PRODUCTION_IMAGE_ID" \
+                    > "${RELEASE_ROOT}/production-image-id.tmp"
+
+                    mv "${RELEASE_ROOT}/production-image.tmp" \
+                    "${RELEASE_ROOT}/production-image"
+
+                    mv "${RELEASE_ROOT}/production-sha.tmp" \
+                    "${RELEASE_ROOT}/production-sha"
+
+                    mv "${RELEASE_ROOT}/production-image-id.tmp" \
+                    "${RELEASE_ROOT}/production-image-id"
+
+                    echo "===== PRODUCTION ====="
+                    echo "Image:    $RELEASE_IMAGE"
+                    echo "Image ID: $PRODUCTION_IMAGE_ID"
+                    echo "Commit:   $RELEASE_SHA"
+                    echo "Backup:   $DB_BACKUP"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'LUAS Pets deployment: SUCCESS'
+        }
+
+        failure {
+            script {
+                if (env.DEPLOY_STARTED == 'true' && env.ROLLBACK_IMAGE?.trim()) {
+                    sh '''
+                        set +e
+
+                        echo "===== AUTOMATIC APP ROLLBACK ====="
+                        echo "Rollback image: $ROLLBACK_IMAGE"
+
+                        APP_IMAGE="$ROLLBACK_IMAGE" \
+                        docker compose \
+                          --project-name "$COMPOSE_PROJECT" \
+                          --env-file "$PROD_ENV" \
+                          -f "$ROLLBACK_COMPOSE" \
+                          up -d \
+                          --no-deps \
+                          --no-build \
+                          --force-recreate \
+                          app
+
+                        sleep 15
+
+                        docker run --rm \
+                          --network luas-pets_luas-network \
+                          curlimages/curl:8.12.1 \
+                          -fsS \
+                          http://luas-pets-app:9091/actuator/health \
+                          || true
+
+                        echo
+                        echo "Database backup retained at:"
+                        echo "$DB_BACKUP"
+                    '''
+                } else {
+                    echo 'Deployment had not started; rollback was not necessary.'
+                }
+            }
+
+            echo 'LUAS Pets deployment: FAILED'
+        }
+
+        always {
+            sh '''
+                echo "===== FINAL APP STATE ====="
+
+                docker inspect luas-pets-app \
+                  --format 'Status={{.State.Status}} Restart={{.RestartCount}} Image={{.Config.Image}}' \
+                  || true
+            '''
+        }
+    }
+}
